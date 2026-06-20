@@ -41,9 +41,9 @@ h = {
 }
 
 # =========================
-# 🔥 세로만 확장 (핵심)
+# 세로 확장 (유지)
 # =========================
-Y_SCALE = 2.6
+Y_SCALE = 1.8
 
 pos = {
     "서울": (0,10),
@@ -70,7 +70,6 @@ def reset():
     st.session_state.path = ["부산"]
     st.session_state.started = False
     st.session_state.popup = ""
-    st.session_state.success = False   # 🔥 추가
 
 if "current" not in st.session_state:
     reset()
@@ -80,11 +79,34 @@ st.title("🚗 탐색 알고리즘 게임 (Greedy vs A*)")
 algo = st.radio("알고리즘", ["최상 우선 탐색", "A* 탐색"], horizontal=True)
 
 # =========================
-# 시작 화면 (변경 없음)
+# 🔥 START 화면 + 평가함수 설명 추가
 # =========================
 if not st.session_state.started:
 
-    st.info("알고리즘 설명을 확인 후 시작하세요.")
+    st.markdown("## 탐색 알고리즘 설명")
+
+    if algo == "최상 우선 탐색":
+
+        st.info("""
+### 최상 우선 탐색 (Greedy Best-First Search)
+
+- 평가 함수: **h(n)**
+- 현재 노드에서 목표까지의 추정 거리만 사용
+- 가장 작은 h(n)을 가진 노드를 선택
+
+👉 f(n) 사용하지 않음
+        """)
+
+    else:
+
+        st.info("""
+### A* 탐색
+
+- 평가 함수: **f(n) = g(n) + h(n)**
+- g(n): 시작점 → 현재까지 실제 비용
+- h(n): 현재 → 목표 추정 비용
+- f(n)이 가장 작은 노드를 선택
+        """)
 
     if st.button("시작하기"):
         st.session_state.started = True
@@ -92,6 +114,9 @@ if not st.session_state.started:
 
     st.stop()
 
+# =========================
+# 현재 상태
+# =========================
 current = st.session_state.current
 
 # =========================
@@ -101,6 +126,7 @@ candidates = []
 
 if current != "서울":
     for nxt, dist in graph[current].items():
+
         g = st.session_state.cost + dist
         hh = h[nxt]
         f = g + hh
@@ -140,6 +166,14 @@ def draw():
             edge_text_y.append((y0+y1)/2)
             edge_text.append(str(w))
 
+    edge_trace = go.Scatter(
+        x=edge_x,
+        y=edge_y,
+        mode="lines",
+        line=dict(width=2, color="#888"),
+        hoverinfo="none"
+    )
+
     node_x, node_y, labels, colors = [], [], [], []
 
     for n in graph:
@@ -165,26 +199,7 @@ def draw():
         else:
             colors.append("orange")
 
-    fig = go.Figure()
-
-    fig.add_trace(go.Scatter(
-        x=edge_x,
-        y=edge_y,
-        mode="lines",
-        line=dict(width=2, color="#888"),
-        hoverinfo="none"
-    ))
-
-    fig.add_trace(go.Scatter(
-        x=edge_text_x,
-        y=edge_text_y,
-        mode="text",
-        text=edge_text,
-        textfont=dict(size=12),
-        hoverinfo="none"
-    ))
-
-    fig.add_trace(go.Scatter(
+    node_trace = go.Scatter(
         x=node_x,
         y=node_y,
         mode="markers+text",
@@ -192,14 +207,18 @@ def draw():
         textposition="top center",
         marker=dict(size=35, color=colors),
         hoverinfo="text"
-    ))
-
-    fig.update_layout(
-        height=850,
-        margin=dict(l=10, r=10, t=10, b=10)
     )
 
-    return fig
+    weight_trace = go.Scatter(
+        x=edge_text_x,
+        y=edge_text_y,
+        mode="text",
+        text=edge_text,
+        textfont=dict(size=12),
+        hoverinfo="none"
+    )
+
+    return go.Figure([edge_trace, weight_trace, node_trace])
 
 # =========================
 # 출력
@@ -232,37 +251,18 @@ with col2:
                     st.session_state.cost += graph[current][nxt]
                     st.session_state.score += 10
                     st.rerun()
-
                 else:
                     st.session_state.popup = f"오답! 정답: {correct}"
                     st.rerun()
 
-                    st.error(st.session_state.popup)
+if st.session_state.popup:
+    st.error(st.session_state.popup)
 
-# =========================
-# 🎉 정답 도착 효과
-# =========================
-if current == "서울" and not st.session_state.success:
+    if st.button("확인"):
+        st.session_state.popup = ""
 
-    st.session_state.success = True
-
-    st.success("🎉 서울 도착!")
-
-    st.balloons()
-
-    st.markdown(
-        """
-        <div style="
-        text-align:center;
-        font-size:24px;
-        font-weight:bold;
-        color:#2ecc71;">
-        🎊 탐색 성공! 최적 경로 도달 🎊
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
+if current == "서울":
+    st.success("도착!")
     st.write("총 비용:", st.session_state.cost)
     st.write("점수:", st.session_state.score)
 
