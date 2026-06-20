@@ -3,7 +3,7 @@ import graphviz
 
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
-# CSS 스타일 주입 (들여쓰기 공간의 모든 유령 공백 제거)
+# CSS 스타일 주입
 st.markdown("""<style>
 .main { background-color: #f8fafc; }
 .sim-container {
@@ -181,14 +181,20 @@ with col_info:
         st.snow()
         st.success("🎉 **목표 상태 도달 성공!** 모든 요소를 강 건너로 무사히 이동시켰습니다.")
         st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
+        
         history_elements = []
         for state in st.session_state.history:
             state_str = "".join(state)
             is_last = (state == st.session_state.history[-1])
             active_class = "active" if is_last else ""
+            # 💡 수정 포인트: f-string 컴파일 오류를 막기 위해 클래스를 분리하여 안전하게 삽입
             history_elements.append(f'<div class="timeline-node {active_class}">{state_str}</div>')
-        timeline_html = f'<div class="timeline-box">{" <span style="color:#94a3b8;font-weight:bold;">➔</span> ".join(history_elements)}</div>'
+        
+        # 💡 수정 포인트: f-string 문법 충돌 유발 문자인 #94a3b8 스타일을 제거하고 안전하게 결합
+        arrow_separator = ' <span style="font-weight:bold; color:gray;">➔</span> '
+        timeline_html = f'<div class="timeline-box">{arrow_separator.join(history_elements)}</div>'
         st.markdown(timeline_html, unsafe_allow_html=True)
+        
         if st.button("🔄 게임 초기화 후 다시 하기"):
             st.session_state.history = [('L','L','L','L')]
             st.session_state.last_toast = None
