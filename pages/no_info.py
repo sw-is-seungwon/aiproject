@@ -11,7 +11,6 @@ with st.sidebar:
         ["깊이 우선 탐색 (DFS)", "너비 우선 탐색 (BFS)"]
     )
 
-# HTML/CSS 문자열의 시작점 들여쓰기를 벽에 바짝 붙여 깨짐 현상을 원천 차단합니다.
 st.markdown("""<style>
 .main { background-color: #f8fafc; }
 .sim-container {
@@ -159,7 +158,6 @@ overlay_html = ""
 if game_over:
     overlay_html = f'<div class="game-over-overlay"><div style="font-size:32px; margin-bottom:5px;">🚨 GAME OVER 🚨</div><div style="font-size:16px; opacity:0.9;">{reason}</div></div>'
 
-# 💡 문자열 꼬임 우려를 완벽하게 차단하기 위해 순수 벽 정렬 포맷으로 주입
 st.markdown(f"""<div class="sim-container">
 {overlay_html}
 <div class="land land-left"></div>
@@ -176,7 +174,6 @@ st.markdown(f"""<div class="sim-container">
 col_info, _ = st.columns([3, 1])
 with col_info:
     if game_over:
-        # 💡 요구사항 1 반영: 게임 오버 시 리셋/되돌아가기 버튼만 표출 (기존 하단 버튼은 아래 조건식에서 원천 숨김)
         if search_mode == "너비 우선 탐색 (BFS)":
             st.warning(f"🚨 탐색 실패: {reason}")
             if st.button("⏪ 이 분기 취소하고 다른 너비 탐색하기 (뒤로 가기)"):
@@ -184,6 +181,7 @@ with col_info:
                     st.session_state.bfs_history.pop()
                     parent = st.session_state.bfs_history[-1]
                     st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
+                    # 💡 버그 수정: 뒤로 갈 때 방문 체크 기록을 완벽히 포맷팅해 주어야 하단 버튼이 다시 살아납니다.
                     st.session_state.bfs_visited_candidates = set()
                     st.session_state.bfs_current_preview = parent
                     st.session_state.bfs_next_level_parent = None
@@ -195,7 +193,7 @@ with col_info:
                 st.rerun()
                 
     elif curr == ('R','R','R','R'):
-        st.balloons(); st.snow()
+        # 💡 피드백 반영: 구린 모션 제거 (st.balloons와 st.snow 삭제)
         st.success(f"🎉 **목표 상태 도달 성공!** {search_mode} 방식으로 안전하게 탐색을 완료했습니다.")
         st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
         
@@ -218,7 +216,6 @@ with col_info:
             st.rerun()
 
     else:
-        # 정상 탐색 진행 중일 때만 작동하는 영역
         if search_mode == "너비 우선 탐색 (BFS)":
             all_visited = len(st.session_state.bfs_visited_candidates) == len(st.session_state.bfs_queue)
             if all_visited:
@@ -303,7 +300,6 @@ scrollable_html = f"""<div id="scroll-container" style="border: 2px solid #e2e8f
 st.components.v1.html(scrollable_html, height=280)
 
 # --- 7. 하단 탐색 제어 선택 버튼부 ---
-# 💡 요구사항 1 교정: 게임오버 및 정답 상태가 아닐 때만 하단 버튼이 빌드되도록 안전 장치 적용
 if next_candidates and not game_over and curr != ('R','R','R','R'):
     if search_mode == "깊이 우선 탐색 (DFS)":
         st.write("📍 **다음에 깊게 탐색할 대상을 선택하세요:**")
@@ -314,7 +310,6 @@ if next_candidates and not game_over and curr != ('R','R','R','R'):
                     st.session_state.dfs_history.append(cand_state)
                     st.rerun()
     else:
-        # BFS는 모든 너비 요소를 채우기 전까지만 활성화
         if len(st.session_state.bfs_visited_candidates) < len(st.session_state.bfs_queue):
             st.write("📍 **이번 깊이(Level)에서 검사할 너비 노드들을 하나씩 모두 확인해 보세요:**")
             cols = st.columns(len(next_candidates))
