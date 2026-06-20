@@ -4,7 +4,6 @@ import graphviz
 # --- 1. 기본 페이지 설정 및 세련된 테마 적용 ---
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
-# CSS 스타일 정의 (속도 조절 및 애니메이션 딜레이 반영)
 st.markdown("""
 <style>
 .main { background-color: #f8fafc; }
@@ -23,11 +22,9 @@ st.markdown("""
 .land-right { right: 0; border-radius: 16px 0 0 0; }
 .river { background-color: #38bdf8; height: 35px; position: absolute; bottom: 0; left: 150px; right: 150px; }
 
-/* 1. 이동 속도를 1.5s -> 3.0s로 변경하여 더 여유롭게 이동 */
 .char { font-size: 26px; position: absolute; transition: all 3.0s ease-in-out; }
 .boat { font-size: 34px; position: absolute; bottom: 3px; transition: all 3.0s ease-in-out; }
 
-/* 2. 캐릭터 이동(3초)이 끝난 후 게임오버 창이 뜨도록 3초 딜레이 및 페이드인 애니메이션 추가 */
 .game-over-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -40,7 +37,7 @@ st.markdown("""
     z-index: 10;
     font-weight: bold;
     animation: fadeIn 0.5s ease-in-out 3.0s forwards;
-    opacity: 0; /* 처음에는 안 보임 */
+    opacity: 0;
 }
 .game-over-title { font-size: 32px; margin-bottom: 5px; animation: shake 0.5s infinite; }
 .game-over-reason { font-size: 16px; opacity: 0.9; }
@@ -80,7 +77,6 @@ div.stButton > button:hover {
     transform: translateY(-1px);
 }
 
-/* 타임라인 스타일 */
 .timeline-box {
     background-color: #ffffff;
     padding: 15px;
@@ -156,14 +152,10 @@ f, w, s, c = curr
 pos = lambda side, offset: f"{offset}px" if side == 'L' else f"calc(100% - {offset + 25}px)"
 boat_pos = "22%" if f == 'L' else "68%"
 
+# 💡 수정 포인트: 파이썬 조건문 내부의 문자열 들여쓰기 문법을 완전히 교정했습니다.
 overlay_html = ""
 if game_over:
-    overlay_html = f"""
-<div class="game-over-overlay">
-<div class="game-over-title">🚨 GAME OVER 🚨</div>
-<div class="game-over-reason">{reason}</div>
-</div>
-"""
+    overlay_html = f"""<div class="game-over-overlay"><div class="game-over-title">🚨 GAME OVER 🚨</div><div class="game-over-reason">{reason}</div></div>"""
 
 st.markdown(f"""
 <div class="sim-container">
@@ -191,7 +183,6 @@ with col_ctrl:
 
 with col_info:
     if game_over:
-        # 3. BFS 모드일 때는 실패하더라도 되돌아갈 수 있도록 분기 분리
         if st.session_state.search_mode == "너비 우선 탐색 (BFS)":
             st.warning("💡 BFS 모드입니다. 다른 분기(너비)를 탐색하기 위해 이전 단계로 되돌아갈 수 있습니다.")
             if st.button("⏪ 이 분기 취소하고 뒤로 가기"):
@@ -206,12 +197,10 @@ with col_info:
                 st.rerun()
                 
     elif curr == ('R','R','R','R'):
-        # 5. 빵빠레 효과 업그레이드 (풍선 + 눈꽃 동시 연출)
         st.balloons()
         st.snow()
         st.success("🎉 **목표 상태 도달 성공!** 모든 요소를 강 건너로 무사히 이동시켰습니다.")
         
-        # 4. 정답 맞췄을 때 지난 이동 과정 정리 출력
         st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
         history_elements = []
         for state in st.session_state.history:
