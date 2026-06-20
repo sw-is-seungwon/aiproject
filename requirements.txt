@@ -4,3 +4,4 @@ streamlit
 networkx
 matplotlib
 pandas
+numpy
