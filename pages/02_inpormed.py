@@ -2,10 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-st.set_page_config(
-    page_title="탐색 알고리즘 게임",
-    layout="wide"
-)
+st.set_page_config(page_title="탐색 알고리즘 게임", layout="wide")
 
 # =========================
 # 그래프
@@ -44,7 +41,7 @@ h = {
 }
 
 # =========================
-# 위치 (고정 좌표)
+# 위치
 # =========================
 pos = {
     "서울": (0,10),
@@ -78,90 +75,84 @@ if "current" not in st.session_state:
 # =========================
 # UI
 # =========================
-st.title("🚗 탐색 알고리즘 게임 (Plotly 버전)")
+st.title("🚗 탐색 알고리즘 게임 (Greedy vs A*)")
 
-algorithm = st.radio(
-    "알고리즘 선택",
-    ["최상 우선 탐색", "A* 탐색"],
-    horizontal=True
-)
+algo = st.radio("알고리즘 선택", ["최상 우선 탐색", "A* 탐색"], horizontal=True)
 
-# =========================
-# 시작 화면
-# =========================
 if not st.session_state.started:
-
-    st.markdown("### 시작 화면")
-
     if st.button("시작하기"):
         st.session_state.started = True
         st.rerun()
-
     st.stop()
 
-# =========================
-# 현재 상태
-# =========================
 current = st.session_state.current
 
 # =========================
-# 후보 계산
+# 후보 생성 (핵심 수정: g 정확히 반영)
 # =========================
 candidates = []
 
 if current != "서울":
-    for city, dist in graph[current].items():
-        g = st.session_state.cost + dist
-        hh = h[city]
+    for nxt, dist in graph[current].items():
+
+        g = st.session_state.cost + dist   # 누적 비용
+        hh = h[nxt]
         f = g + hh
 
-        candidates.append({"도시": city, "g": g, "h": hh, "f": f})
+        candidates.append({
+            "도시": nxt,
+            "g": g,
+            "h": hh,
+            "f": f,
+            "edge_cost": dist
+        })
 
-    if algorithm == "최상 우선 탐색":
-        correct_city = min(candidates, key=lambda x: x["h"])["도시"]
+    if algo == "최상 우선 탐색":
+        correct = min(candidates, key=lambda x: x["h"])["도시"]
     else:
-        correct_city = min(candidates, key=lambda x: x["f"])["도시"]
+        correct = min(candidates, key=lambda x: x["f"])["도시"]
 
 # =========================
-# Plotly 그래프 생성
+# 그래프 (Plotly)
 # =========================
-def draw_graph():
+def draw():
 
-    edge_x = []
-    edge_y = []
+    edge_x, edge_y, edge_text = [], [], []
 
+    # 간선 + 가중치 표시 (핵심 수정)
     for a in graph:
-        for b in graph[a]:
+        for b, w in graph[a].items():
             x0, y0 = pos[a]
             x1, y1 = pos[b]
+
             edge_x += [x0, x1, None]
             edge_y += [y0, y1, None]
+
+            # 가운데 텍스트 위치
+            edge_text.append(((x0+x1)/2, (y0+y1)/2, str(w)))
 
     edge_trace = go.Scatter(
         x=edge_x,
         y=edge_y,
+        mode="lines",
         line=dict(width=2, color="#888"),
-        hoverinfo="none",
-        mode="lines"
+        hoverinfo="none"
     )
 
-    node_x = []
-    node_y = []
-    text = []
-    colors = []
+    # 노드
+    node_x, node_y, labels, colors = [], [], [], []
 
-    for node in graph:
-
-        x, y = pos[node]
+    for n in graph:
+        x, y = pos[n]
         node_x.append(x)
         node_y.append(y)
-        text.append(node)
+        labels.append(n)
 
-        if node == current:
+        if n == current:
             colors.append("green")
-        elif node == "서울":
+        elif n == "서울":
             colors.append("red")
-        elif node in st.session_state.path:
+        elif n in st.session_state.path:
             colors.append("skyblue")
         else:
             colors.append("orange")
@@ -170,37 +161,44 @@ def draw_graph():
         x=node_x,
         y=node_y,
         mode="markers+text",
-        text=text,
+        text=labels,
         textposition="top center",
         marker=dict(size=35, color=colors),
         hoverinfo="text"
     )
 
-    fig = go.Figure(data=[edge_trace, node_trace])
+    # 간선 숫자 (중요: 별도 trace)
+    weight_trace = go.Scatter(
+        x=[t[0] for t in edge_text],
+        y=[t[1] for t in edge_text],
+        mode="text",
+        text=[t[2] for t in edge_text],
+        textfont=dict(size=12, color="black"),
+        hoverinfo="none"
+    )
+
+    fig = go.Figure([edge_trace, weight_trace, node_trace])
 
     fig.update_layout(
         showlegend=False,
-        margin=dict(l=10, r=10, t=10, b=10),
-        height=600
+        height=600,
+        margin=dict(l=10, r=10, t=10, b=10)
     )
 
     return fig
 
-# =========================
-# 그래프 출력
-# =========================
-col1, col2 = st.columns([3, 1])
+col1, col2 = st.columns([3,1])
 
 with col1:
-    st.plotly_chart(draw_graph(), use_container_width=True)
+    st.plotly_chart(draw(), use_container_width=True)
 
 # =========================
-# 정보 패널
+# 정보
 # =========================
 with col2:
 
-    st.metric("현재 위치", current)
-    st.metric("누적 비용", st.session_state.cost)
+    st.metric("현재", current)
+    st.metric("비용", st.session_state.cost)
     st.metric("점수", st.session_state.score)
 
     st.write("### 경로")
@@ -214,21 +212,21 @@ with col2:
 
         st.write("### 이동")
 
-        for city in graph[current]:
+        for nxt in graph[current]:
 
-            if st.button(city, use_container_width=True):
+            if st.button(nxt, use_container_width=True):
 
-                if city == correct_city:
+                if nxt == correct:
 
-                    st.session_state.current = city
-                    st.session_state.path.append(city)
-                    st.session_state.cost += graph[current][city]
+                    st.session_state.current = nxt
+                    st.session_state.path.append(nxt)
+                    st.session_state.cost += graph[current][nxt]
                     st.session_state.score += 10
                     st.rerun()
 
                 else:
 
-                    st.session_state.popup = f"오답! 정답은 {correct_city}"
+                    st.session_state.popup = f"오답! 정답: {correct}"
                     st.rerun()
 
 # =========================
@@ -244,7 +242,7 @@ if st.session_state.popup:
 # 종료
 # =========================
 if current == "서울":
-    st.success("🎉 도착!")
+    st.success("도착!")
 
     st.write("총 비용:", st.session_state.cost)
     st.write("점수:", st.session_state.score)
