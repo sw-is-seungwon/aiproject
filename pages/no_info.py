@@ -1,10 +1,12 @@
 import streamlit as st
 import graphviz
 
+# --- 1. 기본 페이지 설정 및 세련된 테마 적용 ---
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
-# CSS 스타일 주입
-st.markdown("""<style>
+# 💡 CSS 주입: 모든 문자열 들여쓰기를 벽에 붙여 텍스트 노출 버그 방지
+st.markdown("""
+<style>
 .main { background-color: #f8fafc; }
 .sim-container {
     background: linear-gradient(to bottom, #f0fdf4 0%, #ffffff 100%);
@@ -95,12 +97,16 @@ div.stButton > button:hover {
 }
 </style>""", unsafe_allow_html=True)
 
+# --- 2. 게임 로직 및 세션 초기화 ---
 if 'history' not in st.session_state:
     st.session_state.history = [('L','L','L','L')]
 if 'search_mode' not in st.session_state:
     st.session_state.search_mode = "깊이 우선 탐색 (DFS)"
 if 'last_toast' not in st.session_state:
     st.session_state.last_toast = None
+# BFS 모드에서 탐색 실패(Game Over)한 노드들을 기억하여 트리 색상 유지 및 우회 제어할 세트 추가
+if 'bfs_failed_nodes' not in st.session_state:
+    st.session_state.bfs_failed_nodes = set()
 
 def get_allowed_moves(current_state):
     f, w, s, c = current_state
@@ -133,6 +139,7 @@ if game_over and st.session_state.last_toast != reason:
     st.toast(f"🚨 {reason}", icon="🔥")
     st.session_state.last_toast = reason
 
+# --- 3. 상단 레이아웃: 시뮬레이션 화면 및 오버레이 ---
 f, w, s, c = curr
 pos = lambda side, offset: f"{offset}px" if side == 'L' else f"calc(100% - {offset + 25}px)"
 boat_pos = "22%" if f == 'L' else "68%"
@@ -141,38 +148,43 @@ overlay_html = ""
 if game_over:
     overlay_html = f'<div class="game-over-overlay"><div class="game-over-title">🚨 GAME OVER 🚨</div><div class="game-over-reason">{reason}</div></div>'
 
+# 💡 문자열 들여쓰기를 완벽히 초기화하여 화면 텍스트 노출 버그 원천 봉쇄
 st.markdown(f"""<div class="sim-container">
-    {overlay_html}
-    <div class="land land-left"></div>
-    <div class="land land-right"></div>
-    <div class="river"></div>
-    <div class="boat" style="left: {boat_pos};">🚣</div>
-    <div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
-    <div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
-    <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
-    <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
+{overlay_html}
+<div class="land land-left"></div>
+<div class="land land-right"></div>
+<div class="river"></div>
+<div class="boat" style="left: {boat_pos};">🚣</div>
+<div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
+<div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
+<div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
+<div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
 </div>""", unsafe_allow_html=True)
 
+# --- 4. 안내 문구 및 제어부 ---
 col_info, col_ctrl = st.columns([3, 1])
 with col_ctrl:
     mode = st.radio("🔍 탐색 모드", ["깊이 우선 탐색 (DFS)", "너비 우선 탐색 (BFS)"], label_visibility="collapsed")
     if mode != st.session_state.search_mode:
         st.session_state.search_mode = mode
         st.session_state.history = [('L','L','L','L')]
+        st.session_state.bfs_failed_nodes = set()
         st.session_state.last_toast = None
         st.rerun()
 
 with col_info:
     if game_over:
+        # 💡 피드백 반영: BFS 모드일 때는 실패 팝업이 뜨더라도 우회해서 다른 너비를 탐색하도록 복구 제어 활성화
         if st.session_state.search_mode == "너비 우선 탐색 (BFS)":
-            st.warning("💡 BFS 모드입니다. 다른 분기(너비)를 탐색하기 위해 이전 단계로 되돌아갈 수 있습니다.")
-            if st.button("⏪ 이 분기 취소하고 뒤로 가기"):
+            st.warning("💡 BFS 특성: 현재 분기는 막혔지만 다른 형제 노드(너비)들이 존재합니다. 한 단계 뒤로 가 다른 경로를 시도하세요!")
+            if st.button("⏪ 이 분기 취소하고 다른 너비 탐색하기"):
                 if len(st.session_state.history) > 1:
+                    st.session_state.bfs_failed_nodes.add(st.session_state.history[-1])
                     st.session_state.history.pop()
                     st.session_state.last_toast = None
                     st.rerun()
         else:
-            if st.button("🔄 처음부터 다시 탐색"):
+            if st.button("🔄 처음부터 다시 탐색 (DFS 초기화)"):
                 st.session_state.history = [('L','L','L','L')]
                 st.session_state.last_toast = None
                 st.rerun()
@@ -181,25 +193,22 @@ with col_info:
         st.snow()
         st.success("🎉 **목표 상태 도달 성공!** 모든 요소를 강 건너로 무사히 이동시켰습니다.")
         st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
-        
         history_elements = []
         for state in st.session_state.history:
             state_str = "".join(state)
             is_last = (state == st.session_state.history[-1])
             active_class = "active" if is_last else ""
-            # 💡 수정 포인트: f-string 컴파일 오류를 막기 위해 클래스를 분리하여 안전하게 삽입
             history_elements.append(f'<div class="timeline-node {active_class}">{state_str}</div>')
-        
-        # 💡 수정 포인트: f-string 문법 충돌 유발 문자인 #94a3b8 스타일을 제거하고 안전하게 결합
         arrow_separator = ' <span style="font-weight:bold; color:gray;">➔</span> '
         timeline_html = f'<div class="timeline-box">{arrow_separator.join(history_elements)}</div>'
         st.markdown(timeline_html, unsafe_allow_html=True)
-        
         if st.button("🔄 게임 초기화 후 다시 하기"):
             st.session_state.history = [('L','L','L','L')]
+            st.session_state.bfs_failed_nodes = set()
             st.session_state.last_toast = None
             st.rerun()
 
+# --- 5. 하단 레이아웃: 자동 스크롤형 트리 박스 구동 ---
 st.markdown("---")
 st.write("🌲 **상태 공간 트리 (자동으로 최하단 스크롤이 적용됩니다)**")
 
@@ -211,6 +220,7 @@ dot = graphviz.Digraph()
 dot.attr(rankdir='TB', size='6,4!', ratio='fill')
 dot.attr('node', shape='box', style='filled,rounded', width='1.0', height='0.4', fixedsize='false', fontsize='12', fontname="Arial")
 
+# 지나온 메인 탐색 트리 빌드
 for i, state in enumerate(st.session_state.history):
     node_lbl = " - ".join(state)
     if i == len(st.session_state.history) - 1:
@@ -220,9 +230,13 @@ for i, state in enumerate(st.session_state.history):
     if i > 0:
         dot.edge(f"h_{i-1}", f"h_{i}", color="#94a3b8", arrowsize='0.6')
 
+# 💡 BFS 목적에 맞는 동적 자식 노드 상태 연출 (실패 상태 노드는 트리에서 붉은색 처리)
 for idx, (cand_state, label_text) in enumerate(next_candidates):
     cand_lbl = " - ".join(cand_state)
-    dot.node(f"c_{idx}", cand_lbl, color="#10b981", fillcolor="#d1fae5", fontcolor="#065f46")
+    if cand_state in st.session_state.bfs_failed_nodes:
+        dot.node(f"c_{idx}", cand_lbl + " (실패 확인됨)", color="#ef4444", fillcolor="#fee2e2", fontcolor="#991b1b")
+    else:
+        dot.node(f"c_{idx}", cand_lbl, color="#10b981", fillcolor="#d1fae5", fontcolor="#065f46")
     dot.edge(f"h_{len(st.session_state.history)-1}", f"c_{idx}", style="dashed", color="#10b981", arrowsize='0.6')
 
 svg_data = dot.pipe(format='svg').decode('utf-8')
@@ -243,12 +257,15 @@ scrollable_html = f"""<div id="scroll-container" style="border: 2px solid #e2e8f
 </script>"""
 st.components.v1.html(scrollable_html, height=280)
 
+# --- 6. 탐색 선택기 및 예외 우회 장치 ---
 if next_candidates:
     st.write("📍 **다음에 탐색할 대상을 선택하세요:**")
     cols = st.columns(len(next_candidates))
     for idx, (cand_state, label_text) in enumerate(next_candidates):
         with cols[idx]:
-            if st.button(label_text, key=f"action_btn_{idx}", use_container_width=True):
+            # 이미 실패를 한 적 있는 노드는 비활성화 느낌의 텍스트 추가 가능
+            btn_label = label_text + " ❌" if cand_state in st.session_state.bfs_failed_nodes else label_text
+            if st.button(btn_label, key=f"action_btn_{idx}", use_container_width=True):
                 st.session_state.history.append(cand_state)
                 st.rerun()
 elif not game_over and curr != ('R','R','R','R'):
