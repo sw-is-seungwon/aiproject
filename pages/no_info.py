@@ -12,28 +12,34 @@ with st.sidebar:
     )
 
 st.markdown("""<style>
-.main { background-color: #f8fafc; }
+.main { background-color: #fdfbf7; }
+
+/* 시뮬레이션 박스를 부드러운 파스텔 그라데이션으로 */
 .sim-container {
-    background: linear-gradient(to bottom, #f0fdf4 0%, #ffffff 100%);
+    background: linear-gradient(to bottom, #fff1f2 0%, #f0fdfa 100%);
     height: 160px;
-    border-radius: 16px;
+    border-radius: 24px;
     position: relative;
     overflow: hidden;
-    border: 1px solid #e2e8f0;
+    border: 2px dashed #fbcfe8;
     margin-bottom: 15px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 8px 16px -2px rgba(251, 207, 232, 0.25);
 }
-.land { background-color: #a3e635; width: 150px; height: 50px; position: absolute; bottom: 0; border-top: 3px solid #4d7c0f; }
-.land-left { left: 0; border-radius: 0 16px 0 0; }
-.land-right { right: 0; border-radius: 16px 0 0 0; }
-.river { background-color: #38bdf8; height: 35px; position: absolute; bottom: 0; left: 150px; right: 150px; }
-.char { position: absolute; transition: all 1.2s ease-in-out; }
-.boat { position: absolute; bottom: 3px; transition: all 1.2s ease-in-out; }
+
+/* 밀크 파스텔톤의 땅과 강물 색상 */
+.land { background-color: #e2f9b8; width: 150px; height: 50px; position: absolute; bottom: 0; border-top: 4px solid #a3e635; }
+.land-left { left: 0; border-radius: 0 24px 0 0; }
+.land-right { right: 0; border-radius: 24px 0 0 0; }
+.river { background-color: #bae6fd; height: 35px; position: absolute; bottom: 0; left: 150px; right: 150px; border-top: 2px dashed #7dd3fc; }
+
+.char { position: absolute; transition: all 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.boat { position: absolute; bottom: 3px; transition: all 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
 .game-over-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(239, 68, 68, 0.85);
-    color: white;
+    background-color: rgba(254, 226, 226, 0.9);
+    color: #be123c;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -44,24 +50,30 @@ st.markdown("""<style>
     opacity: 0;
 }
 @keyframes fadeIn { to { opacity: 1; } }
+
+/* 말랑말랑 마카롱 느낌의 둥근 파스텔 버튼 */
 div.stButton > button {
-    border-radius: 24px !important;
-    border: 1px solid #cbd5e1 !important;
+    border-radius: 30px !important;
+    border: 2px solid #fbcfe8 !important;
     background-color: #ffffff !important;
-    color: #334155 !important;
-    font-weight: 600 !important;
+    color: #db2777 !important;
+    font-weight: 700 !important;
     padding: 10px 20px !important;
+    box-shadow: 0 4px 6px rgba(251, 207, 232, 0.3) !important;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
 }
 div.stButton > button:hover {
-    border-color: #4f46e5 !important;
-    background-color: #f5f3ff;
-    color: #4f46e5 !important;
+    border-color: #f472b6 !important;
+    background-color: #fdf2f8 !important;
+    color: #be123c !important;
+    transform: scale(1.03);
 }
+
 .timeline-box {
-    background-color: #ffffff;
+    background-color: #fff9fa;
     padding: 15px;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    border: 2px dashed #fbcfe8;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -70,16 +82,16 @@ div.stButton > button:hover {
 .timeline-node {
     background-color: #f1f5f9;
     padding: 6px 12px;
-    border-radius: 12px;
+    border-radius: 14px;
     font-family: monospace;
     font-weight: bold;
     color: #334155;
     border: 1px solid #cbd5e1;
 }
 .timeline-node.active {
-    background-color: #6366f1;
+    background-color: #f472b6;
     color: #ffffff;
-    border-color: #4f46e5;
+    border-color: #db2777;
 }
 </style>""", unsafe_allow_html=True)
 
@@ -176,7 +188,6 @@ st.markdown(f"""<div class="sim-container">
 # --- 5. 상태 제어 및 리셋부 ---
 col_info, _ = st.columns([3, 1])
 with col_info:
-    # DFS 모드일 때만 실패 시 전체 차단 후 리셋 버튼 노출
     if game_over and search_mode == "깊이 우선 탐색 (DFS)":
         if st.button("🔄 처음부터 다시 탐색 (DFS 리셋)"):
             st.session_state.dfs_history = [('L','L','L','L')]
@@ -205,7 +216,6 @@ with col_info:
             st.rerun()
 
     else:
-        # 💡 핵심 수정 포인트: 이제 BFS 상태에서는 실패 노드를 띄우고 있어도 상단 조건문에 가로막히지 않고 이 엘스 블록 내부로 정상 진입합니다.
         if search_mode == "너비 우선 탐색 (BFS)":
             all_visited = len(st.session_state.bfs_visited_candidates) == len(st.session_state.bfs_queue)
             if all_visited:
@@ -237,21 +247,21 @@ st.write("🌲 **상태 공간 트리 (자동 최하단 스크롤 적용)**")
 
 dot = graphviz.Digraph()
 dot.attr(rankdir='TB', size='6,4!', ratio='fill')
-dot.attr('node', shape='box', style='filled,rounded', width='1.4', height='0.4', fixedsize='true', fontsize='10', fontname="Arial")
+dot.attr('node', shape='box', style='filled,rounded', width='1.4', height='0.4', fixedsize='true', fontsize='10', fontname="Arial", color="#fbcfe8", penwidth="2")
 
 if search_mode == "깊이 우선 탐색 (DFS)":
     for i, state in enumerate(st.session_state.dfs_history):
         node_lbl = "".join(state)
         if i == len(st.session_state.dfs_history) - 1:
-            dot.node(f"h_{i}", node_lbl, color="#4f46e5", fillcolor="#6366f1", fontcolor="white", penwidth="2")
+            dot.node(f"h_{i}", node_lbl, color="#db2777", fillcolor="#f472b6", fontcolor="white", penwidth="2")
         else:
-            dot.node(f"h_{i}", node_lbl, color="#cbd5e1", fillcolor="#f1f5f9", fontcolor="#64748b")
-        if i > 0: dot.edge(f"h_{i-1}", f"h_{i}", color="#94a3b8", arrowsize='0.6')
+            dot.node(f"h_{i}", node_lbl, color="#fbcfe8", fillcolor="#fff1f2", fontcolor="#db2777")
+        if i > 0: dot.edge(f"h_{i-1}", f"h_{i}", color="#f472b6", arrowsize='0.6', penwidth="2")
 else:
     for i, state in enumerate(st.session_state.bfs_history):
         node_lbl = "".join(state)
-        dot.node(f"h_{i}", node_lbl, color="#cbd5e1", fillcolor="#f1f5f9", fontcolor="#64748b")
-        if i > 0: dot.edge(f"h_{i-1}", f"h_{i}", color="#94a3b8", arrowsize='0.6')
+        dot.node(f"h_{i}", node_lbl, color="#fbcfe8", fillcolor="#fff1f2", fontcolor="#db2777")
+        if i > 0: dot.edge(f"h_{i-1}", f"h_{i}", color="#f472b6", arrowsize='0.6', penwidth="2")
 
 for idx, (cand_state, label_text) in enumerate(next_candidates):
     cand_lbl = "".join(cand_state)
@@ -260,37 +270,32 @@ for idx, (cand_state, label_text) in enumerate(next_candidates):
     is_cand_invalid, _ = is_invalid(cand_state)
     
     if is_previewed:
-        dot.node(f"c_{idx}", cand_lbl, color="#4f46e5", fillcolor="#818cf8", fontcolor="white")
+        dot.node(f"c_{idx}", cand_lbl, color="#ca8a04", fillcolor="#fef08a", fontcolor="#854d0e")
     elif is_visited and is_cand_invalid:
-         dot.node(f"c_{idx}", cand_lbl, color="#ef4444", fillcolor="#fee2e2", fontcolor="#991b1b")
+         dot.node(f"c_{idx}", cand_lbl, color="#dc2626", fillcolor="#fee2e2", fontcolor="#991b1b")
     elif is_visited:
-         dot.node(f"c_{idx}", cand_lbl, color="#10b981", fillcolor="#d1fae5", fontcolor="#065f46")
+         dot.node(f"c_{idx}", cand_lbl, color="#16a34a", fillcolor="#dcfce7", fontcolor="#14532d")
     else:
-         dot.node(f"c_{idx}", cand_lbl, color="#94a3b8", fillcolor="#ffffff", fontcolor="#64748b")
+         dot.node(f"c_{idx}", cand_lbl, color="#cbd5e1", fillcolor="#ffffff", fontcolor="#64748b")
          
     parent_idx = len(st.session_state.dfs_history)-1 if search_mode == "깊이 우선 탐색 (DFS)" else len(st.session_state.bfs_history)-1
-    dot.edge(f"h_{parent_idx}", f"c_{idx}", style="dashed", color="#94a3b8", arrowsize='0.6')
+    dot.edge(f"h_{parent_idx}", f"c_{idx}", style="dashed", color="#fbcfe8", arrowsize='0.6', penwidth="1.5")
 
 svg_data = dot.pipe(format='svg').decode('utf-8')
 
-scrollable_html = f"""<div id="scroll-container" style="border: 2px solid #e2e8f0; border-radius: 12px; height: 260px; overflow-y: auto; overflow-x: hidden; padding: 10px; background-color: white; display: flex; justify-content: center;">
+scrollable_html = f"""<div id="scroll-container" style="border: 2px dashed #fbcfe8; border-radius: 20px; height: 260px; overflow-y: auto; overflow-x: hidden; padding: 10px; background-color: white; display: flex; justify-content: center;">
     <div>{svg_data}</div>
 </div>
 <script>
     function scrollToBottom() {{
         var container = document.getElementById("scroll-container");
-        if(container) {{
-            container.scrollTop = container.scrollHeight;
-        }}
+        if(container) {{ container.scrollTop = container.scrollHeight; }}
     }}
-    window.onload = function() {{
-        setTimeout(scrollToBottom, 50);
-    }};
+    window.onload = function() {{ setTimeout(scrollToBottom, 50); }};
 </script>"""
 st.components.v1.html(scrollable_html, height=280)
 
 # --- 7. 하단 탐색 제어 선택 버튼부 ---
-# 💡 핵심 수정 2: BFS 모드일 때는 일시적인 Game Over가 감지되어도 아래 버튼들을 차단하지 않고 자유롭게 누를 수 있게 조건을 분리했습니다.
 should_show_buttons = False
 if search_mode == "깊이 우선 탐색 (DFS)" and not game_over and curr != ('R','R','R','R'):
     should_show_buttons = True
@@ -307,7 +312,6 @@ if next_candidates and should_show_buttons:
                     st.session_state.dfs_history.append(cand_state)
                     st.rerun()
     else:
-        # 모든 너비 노드를 다 클릭해 보기 전까지 선택 버튼 상시 유지
         if len(st.session_state.bfs_visited_candidates) < len(st.session_state.bfs_queue):
             st.write("📍 **이번 깊이(Level)에서 검사할 너비 노드들을 하나씩 모두 확인해 보세요:**")
             cols = st.columns(len(next_candidates))
