@@ -11,7 +11,7 @@ with st.sidebar:
         ["깊이 우선 탐색 (DFS)", "너비 우선 탐색 (BFS)"]
     )
 
-# 💡 구버전 및 파이썬 3.10 파서 호환성 최적화: 줄바꿈과 여백을 최소화하여 인식을 안전하게 처리
+# 💡 안전한 호환성 해결: st.markdown을 사용하되 들여쓰기를 완전히 없애 코드로 오인하는 버그 원천 차단
 st.markdown("""<style>
 .main { background-color: #f8fafc; }
 .sim-container {
@@ -29,11 +29,11 @@ st.markdown("""<style>
 .land-right { right: 0; border-radius: 16px 0 0 0; }
 .river { background-color: #38bdf8; height: 35px; position: absolute; bottom: 0; left: 150px; right: 150px; }
 
-/* 1. 이모지 이동 속도 감속 (1.2초로 부드럽고 쾌적하게 조절) */
+/* 이모지 이동 속도 감속 (1.2초로 부드럽고 빠르게 최적화) */
 .char { position: absolute; transition: all 1.2s ease-in-out; }
 .boat { position: absolute; bottom: 3px; transition: all 1.2s ease-in-out; }
 
-/* 2. 캐릭터가 강을 건넌 직후(1.2초) 자연스럽게 오버레이가 페이드인 되도록 설계 */
+/* 이동 직후(1.2초) 곧바로 오버레이가 스르륵 뜨도록 변경 */
 .game-over-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -106,7 +106,7 @@ div.stButton > button:hover {
 }
 </style>""", unsafe_allow_html=True)
 
-# --- 2. 탐색 규칙용 핵심 헬퍼 함수 ---
+# --- 2. 함수 선언 (이동 규칙 및 검증) ---
 def get_allowed_moves(current_state, history_list):
     f, w, s, c = current_state
     next_f = 'R' if f == 'L' else 'L'
@@ -131,11 +131,11 @@ def is_invalid(state):
     if s == c and f != s: return True, "양이 양배추를 먹어치웠습니다! 🐑"
     return False, ""
 
-# --- 3. 세션 상태 캐시 초기화 ---
+# --- 3. 세션 상태 및 변수 초기화 ---
 if 'dfs_history' not in st.session_state:
     st.session_state.dfs_history = [('L','L','L','L')]
 
-# 3. 너비 우선 탐색(BFS)의 큐 구조 반영용 변수들
+# BFS용 구조: 현재 깊이의 '큐(너비 노드들)', '현재 미리보기 상태', '확인 완료 기록' 추적
 if 'bfs_history' not in st.session_state:
     st.session_state.bfs_history = [('L','L','L','L')]
 if 'bfs_queue' not in st.session_state:
@@ -150,7 +150,7 @@ if 'bfs_next_level_parent' not in st.session_state:
 if 'last_toast' not in st.session_state:
     st.session_state.last_toast = None
 
-# 모드별 데이터 제어 매핑
+# 현재 선택한 모드에 맞춰 데이터 분리 매핑
 if search_mode == "깊이 우선 탐색 (DFS)":
     history = st.session_state.dfs_history
     curr = st.session_state.dfs_history[-1]
@@ -166,7 +166,7 @@ if game_over and st.session_state.last_toast != reason:
     st.toast(f"🚨 {reason}", icon="🔥")
     st.session_state.last_toast = reason
 
-# --- 4. 메인 시뮬레이션 인터페이스 렌더링 ---
+# --- 4. 메인 화면 타이틀 및 상단 시뮬레이션 박스 렌더링 ---
 st.title(f"✨ {search_mode} 시뮬레이터")
 
 f, w, s, c = curr
@@ -177,7 +177,7 @@ overlay_html = ""
 if game_over:
     overlay_html = f'<div class="game-over-overlay"><div class="game-over-title">🚨 GAME OVER 🚨</div><div class="game-over-reason">{reason}</div></div>'
 
-# 파이썬 3.10 문법 안전 격리형 마크다운 출력
+# st.markdown을 안전하게 벽에 붙여 출력
 st.markdown(f"""<div class="sim-container">
     {overlay_html}
     <div class="land land-left"></div>
@@ -190,7 +190,7 @@ st.markdown(f"""<div class="sim-container">
     <div class="char" style="left: {pos(c, 100)}; bottom: 12px; font-size:26px;">🥬</div>
 </div>""", unsafe_allow_html=True)
 
-# --- 5. 상태 제어 및 롤백/리셋 장치 ---
+# --- 5. 게임 상태 제어 및 리셋/뒤로가기 버튼부 ---
 if game_over:
     if search_mode == "너비 우선 탐색 (BFS)":
         st.warning("💡 BFS 모드 특성: 현재 분기는 실패 상태이지만, 형제 분기(너비)들이 열려 있습니다. 뒤로 가 다른 너비를 시도하세요.")
@@ -198,24 +198,23 @@ if game_over:
             if len(st.session_state.bfs_history) > 1:
                 st.session_state.bfs_history.pop()
                 st.session_state.last_toast = None
+                # 이전 부모 상태에서 큐를 다시 확보하여 롤백
                 parent = st.session_state.bfs_history[-1]
                 st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
                 st.session_state.bfs_visited_candidates = set()
                 st.session_state.bfs_current_preview = parent
                 st.session_state.bfs_next_level_parent = None
-                st.experimental_rerun()
+                st.rerun()
     else:
         if st.button("🔄 처음부터 다시 탐색 (DFS 리셋)"):
             st.session_state.dfs_history = [('L','L','L','L')]
             st.session_state.last_toast = None
-            st.experimental_rerun()
+            st.rerun()
             
 elif curr == ('R','R','R','R'):
-    # 5. 빵빠레 시각 연출 (풍선 + 눈)
     st.balloons(); st.snow()
     st.success(f"🎉 **목표 상태 도달 성공!** {search_mode} 방식으로 안전하게 모두 이동시켰습니다.")
     
-    # 4. 정답 도달 시 타임라인 정리 요약 출력
     st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
     history_elements = []
     for state in history:
@@ -236,10 +235,10 @@ elif curr == ('R','R','R','R'):
             st.session_state.bfs_current_preview = ('L','L','L','L')
             st.session_state.bfs_next_level_parent = None
         st.session_state.last_toast = None
-        st.experimental_rerun()
+        st.rerun()
 
 else:
-    # 3. BFS의 본질적 의미 코딩: 현재 너비의 4개 경우의 수를 다 누르기 전까지 다음 단계 제어 차단
+    # BFS 일 때 모든 너비 요소를 탐색 완료했는지 조건 분기 유도
     if search_mode == "너비 우선 탐색 (BFS)":
         all_visited = len(st.session_state.bfs_visited_candidates) == len(st.session_state.bfs_queue)
         if all_visited:
@@ -252,7 +251,7 @@ else:
                     st.session_state.bfs_visited_candidates = set()
                     st.session_state.bfs_current_preview = next_parent
                     st.session_state.bfs_next_level_parent = None
-                    st.experimental_rerun()
+                    st.rerun()
             else:
                 st.error("❌ 현재 레벨의 모든 너비 분기가 실패 상태입니다! 나아갈 수 있는 곳이 없습니다.")
                 if st.button("⏪ 한 단계 위 부모 노드로 롤백"):
@@ -263,7 +262,7 @@ else:
                         st.session_state.bfs_visited_candidates = set()
                         st.session_state.bfs_current_preview = parent
                         st.session_state.bfs_next_level_parent = None
-                        st.experimental_rerun()
+                        st.rerun()
 
 # --- 6. 하단 레이아웃: 상태 공간 트리 그래프 빌드 ---
 st.markdown("---")
@@ -347,10 +346,10 @@ if next_candidates and not (search_mode == "너비 우선 탐색 (BFS)" and len(
                     is_cand_fail, _ = is_invalid(cand_state)
                     if not is_cand_fail:
                         st.session_state.bfs_next_level_parent = cand_state
-                st.experimental_rerun()
+                st.rerun()
 elif not game_over and curr != ('R','R','R','R') and search_mode == "깊이 우선 탐색 (DFS)":
     st.warning("⚠️ **더 이상 이동할 수 있는 경로가 없습니다! (막다른 길)**")
     if st.button("⏪ 한 단계 뒤로 가기"):
         if len(st.session_state.dfs_history) > 1:
             st.session_state.dfs_history.pop()
-        st.experimental_rerun()
+        st.rerun()
