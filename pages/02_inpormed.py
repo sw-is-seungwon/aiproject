@@ -1,36 +1,37 @@
 import streamlit as st
-import networkx as nx
-import matplotlib.pyplot as plt
-import random
 import copy
 
-st.set_page_config(page_title="정보 이용 탐색 알고리즘", layout="wide")
+st.set_page_config(page_title="정보 이용 탐색", layout="wide")
 
 # =====================================================
 
-# 8퍼즐 관련 함수
+# 8퍼즐
 
 # =====================================================
 
 GOAL = [
-[1,2,3],
-[4,5,6],
-[7,8,0]
+[1, 2, 3],
+[4, 5, 6],
+[7, 8, 0]
 ]
 
-INITIAL_PUZZLE = [
-[2,8,3],
-[1,6,4],
-[7,0,5]
+INITIAL = [
+[2, 8, 3],
+[1, 6, 4],
+[7, 0, 5]
 ]
 
-def misplaced_tiles(board):
+def h_value(board):
 count = 0
+
+```
 for i in range(3):
-for j in range(3):
-if board[i][j] != 0 and board[i][j] != GOAL[i][j]:
-count += 1
+    for j in range(3):
+        if board[i][j] != 0 and board[i][j] != GOAL[i][j]:
+            count += 1
+
 return count
+```
 
 def find_blank(board):
 for i in range(3):
@@ -38,47 +39,53 @@ for j in range(3):
 if board[i][j] == 0:
 return i, j
 
-def possible_moves(board):
-r, c = find_blank(board)
+def moves(board):
 
 ```
-moves = []
+r, c = find_blank(board)
 
-directions = {
-    "위":(-1,0),
-    "아래":(1,0),
-    "왼쪽":(0,-1),
-    "오른쪽":(0,1)
+result = []
+
+dirs = {
+    "위": (-1, 0),
+    "아래": (1, 0),
+    "왼쪽": (0, -1),
+    "오른쪽": (0, 1)
 }
 
-for name, (dr,dc) in directions.items():
+for name, (dr, dc) in dirs.items():
 
     nr = r + dr
     nc = c + dc
 
     if 0 <= nr < 3 and 0 <= nc < 3:
+
         new_board = copy.deepcopy(board)
 
         new_board[r][c], new_board[nr][nc] = \
             new_board[nr][nc], new_board[r][c]
 
-        h = misplaced_tiles(new_board)
+        result.append(
+            (name, new_board, h_value(new_board))
+        )
 
-        moves.append((name,new_board,h))
-
-return moves
+return result
 ```
 
-def board_to_text(board):
+def board_text(board):
+
+```
 text = ""
 
-```
 for row in board:
-    for v in row:
-        if v == 0:
+
+    for value in row:
+
+        if value == 0:
             text += "□ "
         else:
-            text += str(v)+" "
+            text += str(value) + " "
+
     text += "\n"
 
 return text
@@ -91,70 +98,53 @@ return text
 # =====================================================
 
 heuristic = {
-"교실":60,
-"복도A":45,
-"복도B":40,
-"계단1":30,
-"계단2":25,
-"도서관":15,
-"과학실":20,
-"체육관":10,
-"강당":15,
-"급식실":0
+"교실": 60,
+"복도A": 45,
+"복도B": 40,
+"계단1": 30,
+"계단2": 25,
+"도서관": 15,
+"과학실": 20,
+"체육관": 10,
+"강당": 15,
+"급식실": 0
 }
 
-edges = [
-("교실","복도A",20),
+graph = {
+"교실": [("복도A", 20)],
 
 ```
-("복도A","복도B",10),
-("복도A","계단1",15),
+"복도A": [("교실", 20),
+         ("복도B", 10),
+         ("계단1", 15)],
 
-("복도B","계단2",20),
+"복도B": [("복도A", 10),
+         ("계단2", 20)],
 
-("계단1","계단2",15),
-("계단1","도서관",10),
+"계단1": [("복도A", 15),
+         ("계단2", 15),
+         ("도서관", 10)],
 
-("계단2","과학실",10),
+"계단2": [("복도B", 20),
+         ("계단1", 15),
+         ("과학실", 10)],
 
-("도서관","과학실",15),
+"도서관": [("계단1", 10),
+         ("과학실", 15),
+         ("체육관", 20)],
 
-("도서관","체육관",20),
+"과학실": [("계단2", 10),
+         ("도서관", 15),
+         ("강당", 20)],
 
-("과학실","강당",20),
+"체육관": [("도서관", 20),
+         ("강당", 10),
+         ("급식실", 15)],
 
-("체육관","강당",10),
+"강당": [("과학실", 20),
+        ("체육관", 10)],
 
-("체육관","급식실",15)
-```
-
-]
-
-G = nx.Graph()
-
-for node in heuristic:
-G.add_node(node)
-
-for u,v,w in edges:
-G.add_edge(u,v,weight=w)
-
-positions = {
-"교실":(0,4),
-
-```
-"복도A":(-2,3),
-"복도B":(2,3),
-
-"계단1":(-2,2),
-"계단2":(2,2),
-
-"도서관":(-2,1),
-"과학실":(2,1),
-
-"체육관":(-2,0),
-"강당":(2,0),
-
-"급식실":(-2,-1)
+"급식실": [("체육관", 15)]
 ```
 
 }
@@ -165,17 +155,17 @@ positions = {
 
 # =====================================================
 
-if "puzzle" not in st.session_state:
-st.session_state.puzzle = copy.deepcopy(INITIAL_PUZZLE)
+if "board" not in st.session_state:
+st.session_state.board = copy.deepcopy(INITIAL)
 
-if "current_node" not in st.session_state:
-st.session_state.current_node = "교실"
+if "node" not in st.session_state:
+st.session_state.node = "교실"
 
 if "visited" not in st.session_state:
 st.session_state.visited = ["교실"]
 
-if "g_cost" not in st.session_state:
-st.session_state.g_cost = 0
+if "g" not in st.session_state:
+st.session_state.g = 0
 
 # =====================================================
 
@@ -183,10 +173,10 @@ st.session_state.g_cost = 0
 
 # =====================================================
 
-st.title("정보 이용 탐색 알고리즘 체험")
+st.title("정보 이용 탐색 알고리즘")
 
-mode = st.radio(
-"알고리즘 선택",
+menu = st.radio(
+"선택",
 ["언덕등반 탐색", "최상우선 탐색", "A* 탐색"]
 )
 
@@ -196,49 +186,44 @@ mode = st.radio(
 
 # =====================================================
 
-if mode == "언덕등반 탐색":
+if menu == "언덕등반 탐색":
 
 ```
-st.header("8퍼즐 : 언덕등반 탐색")
+st.header("8퍼즐 - 언덕등반 탐색")
 
-board = st.session_state.puzzle
-
-col1,col2 = st.columns(2)
+col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("목표 상태")
-    st.text(board_to_text(GOAL))
+    st.text(board_text(GOAL))
 
 with col2:
     st.subheader("현재 상태")
-    st.text(board_to_text(board))
+    st.text(board_text(st.session_state.board))
 
-current_h = misplaced_tiles(board)
+current_h = h_value(st.session_state.board)
 
-st.metric("현재 평가함수 h(n)", current_h)
+st.metric("현재 h(n)", current_h)
 
-moves = possible_moves(board)
+candidate_moves = moves(st.session_state.board)
 
 st.subheader("가능한 이동")
 
-for name,new_board,h in moves:
+for name, board, h in candidate_moves:
     st.write(f"{name} → h={h}")
 
-if st.button("다음 이동 선택"):
+if st.button("다음 이동"):
 
-    best_move = min(moves, key=lambda x:x[2])
+    best = min(candidate_moves, key=lambda x: x[2])
 
-    if best_move[2] >= current_h:
-        st.error("지역 최적해(Local Optimum)에 도달했습니다.")
+    if best[2] >= current_h:
+        st.error("지역 최적해(Local Optimum)")
     else:
-        st.session_state.puzzle = best_move[1]
-        st.success(
-            f"{best_move[0]} 이동 선택! h={best_move[2]}"
-        )
+        st.session_state.board = best[1]
         st.rerun()
 
-if st.button("8퍼즐 초기화"):
-    st.session_state.puzzle = copy.deepcopy(INITIAL_PUZZLE)
+if st.button("퍼즐 초기화"):
+    st.session_state.board = copy.deepcopy(INITIAL)
     st.rerun()
 ```
 
@@ -248,77 +233,46 @@ if st.button("8퍼즐 초기화"):
 
 # =====================================================
 
-elif mode == "최상우선 탐색":
+elif menu == "최상우선 탐색":
 
 ```
-st.header("학교 길찾기 : 최상우선 탐색")
+st.header("최상우선 탐색")
 
-fig, ax = plt.subplots(figsize=(8,6))
+current = st.session_state.node
 
-node_colors = []
+st.write("현재 위치 :", current)
 
-for node in G.nodes():
-    if node == st.session_state.current_node:
-        node_colors.append("red")
-    elif node in st.session_state.visited:
-        node_colors.append("orange")
-    else:
-        node_colors.append("lightblue")
+st.write("평가함수")
+st.code("f(n) = h(n)")
 
-labels = {}
+candidates = []
 
-for n in G.nodes():
-    labels[n] = f"{n}\nh={heuristic[n]}"
+for next_node, cost in graph[current]:
 
-nx.draw(
-    G,
-    positions,
-    labels=labels,
-    node_color=node_colors,
-    node_size=2500,
-    ax=ax
-)
+    if next_node not in st.session_state.visited:
 
-edge_labels = nx.get_edge_attributes(G,'weight')
-
-nx.draw_networkx_edge_labels(
-    G,
-    positions,
-    edge_labels=edge_labels,
-    ax=ax
-)
-
-st.pyplot(fig)
-
-current = st.session_state.current_node
-
-st.info("평가함수 : f(n)=h(n)")
-
-neighbors = []
-
-for n in G.neighbors(current):
-
-    if n not in st.session_state.visited:
-
-        neighbors.append((n,heuristic[n]))
-
-if neighbors:
-
-    st.subheader("후보 노드")
-
-    for n,h in neighbors:
-        st.write(f"{n} → h={h}")
-
-    if st.button("다음 노드 선택"):
-
-        best = min(neighbors,key=lambda x:x[1])
-
-        st.session_state.current_node = best[0]
-        st.session_state.visited.append(best[0])
-
-        st.success(
-            f"{best[0]} 선택 (h={best[1]})"
+        candidates.append(
+            (next_node,
+             heuristic[next_node])
         )
+
+st.subheader("OPEN 리스트")
+
+for node, h in candidates:
+    st.write(f"{node} : h={h}")
+
+if candidates:
+
+    best = min(candidates, key=lambda x: x[1])
+
+    st.success(
+        f"선택 예정 노드 : {best[0]}"
+    )
+
+    if st.button("다음 단계"):
+
+        st.session_state.node = best[0]
+        st.session_state.visited.append(best[0])
 
         st.rerun()
 
@@ -326,8 +280,10 @@ if current == "급식실":
     st.success("급식실 도착!")
 
 if st.button("최상우선 초기화"):
-    st.session_state.current_node = "교실"
+
+    st.session_state.node = "교실"
     st.session_state.visited = ["교실"]
+
     st.rerun()
 ```
 
@@ -340,109 +296,70 @@ if st.button("최상우선 초기화"):
 else:
 
 ```
-st.header("학교 길찾기 : A* 탐색")
+st.header("A* 탐색")
 
-fig, ax = plt.subplots(figsize=(8,6))
+current = st.session_state.node
 
-node_colors = []
+st.write("현재 위치 :", current)
 
-for node in G.nodes():
+st.write("평가함수")
+st.code("f(n) = g(n) + h(n)")
 
-    if node == st.session_state.current_node:
-        node_colors.append("red")
-
-    elif node in st.session_state.visited:
-        node_colors.append("orange")
-
-    else:
-        node_colors.append("lightgreen")
-
-labels = {}
-
-for n in G.nodes():
-    labels[n] = f"{n}\nh={heuristic[n]}"
-
-nx.draw(
-    G,
-    positions,
-    labels=labels,
-    node_color=node_colors,
-    node_size=2500,
-    ax=ax
+st.write(
+    f"현재 누적비용 g(n) = {st.session_state.g}"
 )
-
-edge_labels = nx.get_edge_attributes(G,'weight')
-
-nx.draw_networkx_edge_labels(
-    G,
-    positions,
-    edge_labels=edge_labels,
-    ax=ax
-)
-
-st.pyplot(fig)
-
-current = st.session_state.current_node
-
-st.info("평가함수 : f(n)=g(n)+h(n)")
 
 candidates = []
 
-for neighbor in G.neighbors(current):
+for next_node, cost in graph[current]:
 
-    if neighbor not in st.session_state.visited:
+    if next_node not in st.session_state.visited:
 
-        cost = G[current][neighbor]["weight"]
+        g = st.session_state.g + cost
 
-        g = st.session_state.g_cost + cost
-
-        h = heuristic[neighbor]
+        h = heuristic[next_node]
 
         f = g + h
 
         candidates.append(
-            (neighbor,g,h,f,cost)
+            (next_node, g, h, f)
         )
+
+st.subheader("OPEN 리스트")
+
+for node, g, h, f in candidates:
+
+    st.write(
+        f"{node} → g={g}, h={h}, f={f}"
+    )
 
 if candidates:
 
-    st.subheader("후보 노드")
+    best = min(candidates, key=lambda x: x[3])
 
-    for n,g,h,f,c in candidates:
+    st.success(
+        f"선택 예정 노드 : {best[0]}"
+    )
 
-        st.write(
-            f"{n} → g={g}, h={h}, f={f}"
-        )
+    if st.button("다음 단계"):
 
-    if st.button("A* 다음 이동"):
+        st.session_state.node = best[0]
+        st.session_state.g = best[1]
 
-        best = min(
-            candidates,
-            key=lambda x:x[3]
-        )
-
-        st.session_state.current_node = best[0]
-        st.session_state.visited.append(best[0])
-        st.session_state.g_cost = best[1]
-
-        st.success(
-            f"{best[0]} 선택 (f={best[3]})"
+        st.session_state.visited.append(
+            best[0]
         )
 
         st.rerun()
-
-st.write(
-    f"현재 누적 비용 g(n) = {st.session_state.g_cost}"
-)
 
 if current == "급식실":
     st.success("급식실 도착!")
 
 if st.button("A* 초기화"):
 
-    st.session_state.current_node = "교실"
+    st.session_state.node = "교실"
     st.session_state.visited = ["교실"]
-    st.session_state.g_cost = 0
+    st.session_state.g = 0
 
     st.rerun()
 ```
