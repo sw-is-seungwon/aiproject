@@ -2,7 +2,7 @@ import streamlit as st
 import graphviz
 
 # --- 1. 페이지 설정 및 디자인 CSS 주입 ---
-st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
+st.set_page_config(page_title="무정보 탐색 기법 시뮬레이션", layout="wide")
 
 with st.sidebar:
     st.header("🤖 AI 탐색 방식")
@@ -243,7 +243,7 @@ with col_info:
 
 # --- 6. 하단 레이아웃: 상태 공간 트리 그래프 빌드 ---
 st.markdown("---")
-st.write("🌲 **상태 공간 트리 (자동 최하단 스크롤 적용)**")
+st.write("🌲 **상태 공간 트리**")
 
 dot = graphviz.Digraph()
 dot.attr(rankdir='TB', size='6,4!', ratio='fill')
