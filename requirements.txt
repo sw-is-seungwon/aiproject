@@ -2,3 +2,4 @@ graphviz
 
 streamlit
 streamlit-agraph
+pandas
