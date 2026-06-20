@@ -147,6 +147,10 @@ else:
 
 game_over, reason = is_invalid(curr)
 
+# 💡 요구사항 2 반영: 텍스트 문구 안내판을 팝업창(Toast) 형태로 송출 (중복 토스트 방지 포함)
+if game_over:
+    st.toast(f"🚨 {reason}", icon="🔥")
+
 # --- 4. 상단 레이아웃: 시뮬레이션 인터페이스 ---
 st.title(f"✨ {search_mode} 시뮬레이터")
 
@@ -156,7 +160,7 @@ boat_pos = "22%" if f == 'L' else "68%"
 
 overlay_html = ""
 if game_over:
-    overlay_html = f'<div class="game-over-overlay"><div style="font-size:32px; margin-bottom:5px;">🚨 GAME OVER 🚨</div><div style="font-size:16px; opacity:0.9;">{reason}</div></div>'
+    overlay_html = f'<div class="game-over-overlay"><div style="font-size:32px;">🚨 GAME OVER 🚨</div></div>'
 
 st.markdown(f"""<div class="sim-container">
 {overlay_html}
@@ -175,22 +179,19 @@ col_info, _ = st.columns([3, 1])
 with col_info:
     if game_over:
         if search_mode == "너비 우선 탐색 (BFS)":
-            st.warning(f"🚨 탐색 실패: {reason}")
+            # 💡 기존 시뮬레이션 밑에 뜨던 안 예쁜 st.warning 경고문 문구 완전 박멸
             if st.button("⏪ 이 분기 취소하고 다른 너비 탐색하기 (뒤로 가기)"):
                 if len(st.session_state.bfs_history) > 1:
-                    # 현재 실패 상태 노드를 이력에서 제거
                     st.session_state.bfs_history.pop()
                     parent = st.session_state.bfs_history[-1]
                     
-                    # 💡 버그 수정 핵심: 부모 노드로 돌아갈 때, 부모 기준의 다음 큐를 다시 짜고 
-                    # 이전 탐색의 방문 정보는 완전히 비워주어야(set 초기화) 다른 형제 버튼들이 하단에 다시 나타납니다.
+                    # 💡 버그 3 해결 핵심: 뒤로 가기를 할 때 부모 노드 기준의 합법적 이동 큐를 '완전 재동기화'해 주어야 버튼이 다시 살아납니다!
                     st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
                     st.session_state.bfs_visited_candidates = set()
                     st.session_state.bfs_current_preview = parent
                     st.session_state.bfs_next_level_parent = None
                     st.rerun()
         else:
-            st.error(f"🚨 탐색 실패: {reason}")
             if st.button("🔄 처음부터 다시 탐색 (DFS 리셋)"):
                 st.session_state.dfs_history = [('L','L','L','L')]
                 st.rerun()
@@ -245,7 +246,7 @@ with col_info:
 
 # --- 6. 하단 레이아웃: 상태 공간 트리 그래프 빌드 ---
 st.markdown("---")
-st.write("🌲 **상태 공간 트리 (자동 최하단 스크롤 적용)**")
+st.write("🌲 **상태 공간 트리 (자동 최하단 Скрол 적용)**")
 
 dot = graphviz.Digraph()
 dot.attr(rankdir='TB', size='6,4!', ratio='fill')
@@ -312,7 +313,6 @@ if next_candidates and not game_over and curr != ('R','R','R','R'):
                     st.session_state.dfs_history.append(cand_state)
                     st.rerun()
     else:
-        # 💡 보정: 현재 방문한 노드 수가 전체 큐 후보군보다 작을 때만 선택 버튼들이 그려집니다.
         if len(st.session_state.bfs_visited_candidates) < len(st.session_state.bfs_queue):
             st.write("📍 **이번 깊이(Level)에서 검사할 너비 노드들을 하나씩 모두 확인해 보세요:**")
             cols = st.columns(len(next_candidates))
