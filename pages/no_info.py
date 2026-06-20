@@ -95,7 +95,6 @@ def get_allowed_moves(current_state, history_list):
         ((next_f, w, s, next_f), "🥬 양배추와 함께 이동")
     ]
     for state, label in all_moves:
-        # 농부와 같은 강가에 있는 대상만 함께 탑승 가능
         if "🐺" in label and f != w: continue
         if "🐑" in label and f != s: continue
         if "🥬" in label and f != c: continue
@@ -136,7 +135,7 @@ if st.session_state.current_mode_track != search_mode:
     st.session_state.bfs_next_level_parent = None
     st.rerun()
 
-# 작동 모드에 따른 데이터 독립 바인딩
+# 작동 모드 데이터 매핑
 if search_mode == "깊이 우선 탐색 (DFS)":
     history = st.session_state.dfs_history
     curr = st.session_state.dfs_history[-1]
@@ -148,7 +147,6 @@ else:
 
 game_over, reason = is_invalid(curr)
 
-# 시뮬레이션 밑에 뜨던 지저분한 문구를 오른쪽 하단 팝업창(st.toast)으로 완벽 이동
 if game_over:
     st.toast(f"🚨 {reason}", icon="🔥")
 
@@ -178,23 +176,11 @@ st.markdown(f"""<div class="sim-container">
 # --- 5. 상태 제어 및 리셋부 ---
 col_info, _ = st.columns([3, 1])
 with col_info:
-    if game_over:
-        if search_mode == "너비 우선 탐색 (BFS)":
-            if st.button("⏪ 이 분기 취소하고 다른 너비 탐색하기 (뒤로 가기)"):
-                if len(st.session_state.bfs_history) > 1:
-                    st.session_state.bfs_history.pop()
-                    parent = st.session_state.bfs_history[-1]
-                    
-                    # 💡 버그 완벽 해결: 부모로 갈 때 대기열 큐와 검사 목록을 유기적으로 동시에 재할당
-                    st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
-                    st.session_state.bfs_visited_candidates = set()
-                    st.session_state.bfs_current_preview = parent
-                    st.session_state.bfs_next_level_parent = None
-                    st.rerun()
-        else:
-            if st.button("🔄 처음부터 다시 탐색 (DFS 리셋)"):
-                st.session_state.dfs_history = [('L','L','L','L')]
-                st.rerun()
+    # DFS 모드일 때만 실패 시 전체 차단 후 리셋 버튼 노출
+    if game_over and search_mode == "깊이 우선 탐색 (DFS)":
+        if st.button("🔄 처음부터 다시 탐색 (DFS 리셋)"):
+            st.session_state.dfs_history = [('L','L','L','L')]
+            st.rerun()
                 
     elif curr == ('R','R','R','R'):
         st.success(f"🎉 **목표 상태 도달 성공!** {search_mode} 방식으로 안전하게 탐색을 완료했습니다.")
@@ -219,6 +205,7 @@ with col_info:
             st.rerun()
 
     else:
+        # 💡 핵심 수정 포인트: 이제 BFS 상태에서는 실패 노드를 띄우고 있어도 상단 조건문에 가로막히지 않고 이 엘스 블록 내부로 정상 진입합니다.
         if search_mode == "너비 우선 탐색 (BFS)":
             all_visited = len(st.session_state.bfs_visited_candidates) == len(st.session_state.bfs_queue)
             if all_visited:
@@ -233,8 +220,8 @@ with col_info:
                         st.session_state.bfs_next_level_parent = None
                         st.rerun()
                 else:
-                    st.error("❌ 현재 깊이의 모든 너비 분기가 실패 구역입니다. 위로 롤백해야 합니다.")
-                    if st.button("⏪ 한 단계 위 부모 노드로 롤백"):
+                    st.error("❌ 현재 깊이의 모든 너비 분기가 실패 구역입니다. 이전 레벨의 다른 안전했던 분기로 우회해야 합니다.")
+                    if st.button("⏪ 안전했던 상위 레벨 부모 노드로 롤백"):
                         if len(st.session_state.bfs_history) > 1:
                             st.session_state.bfs_history.pop()
                             parent = st.session_state.bfs_history[-1]
@@ -303,7 +290,14 @@ scrollable_html = f"""<div id="scroll-container" style="border: 2px solid #e2e8f
 st.components.v1.html(scrollable_html, height=280)
 
 # --- 7. 하단 탐색 제어 선택 버튼부 ---
-if next_candidates and not game_over and curr != ('R','R','R','R'):
+# 💡 핵심 수정 2: BFS 모드일 때는 일시적인 Game Over가 감지되어도 아래 버튼들을 차단하지 않고 자유롭게 누를 수 있게 조건을 분리했습니다.
+should_show_buttons = False
+if search_mode == "깊이 우선 탐색 (DFS)" and not game_over and curr != ('R','R','R','R'):
+    should_show_buttons = True
+elif search_mode == "너비 우선 탐색 (BFS)" and curr != ('R','R','R','R'):
+    should_show_buttons = True
+
+if next_candidates and should_show_buttons:
     if search_mode == "깊이 우선 탐색 (DFS)":
         st.write("📍 **다음에 깊게 탐색할 대상을 선택하세요:**")
         cols = st.columns(len(next_candidates))
@@ -313,6 +307,7 @@ if next_candidates and not game_over and curr != ('R','R','R','R'):
                     st.session_state.dfs_history.append(cand_state)
                     st.rerun()
     else:
+        # 모든 너비 노드를 다 클릭해 보기 전까지 선택 버튼 상시 유지
         if len(st.session_state.bfs_visited_candidates) < len(st.session_state.bfs_queue):
             st.write("📍 **이번 깊이(Level)에서 검사할 너비 노드들을 하나씩 모두 확인해 보세요:**")
             cols = st.columns(len(next_candidates))
