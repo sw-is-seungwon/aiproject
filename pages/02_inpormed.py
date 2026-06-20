@@ -1,266 +1,181 @@
 import streamlit as st
-import heapq
-import time
 
-st.set_page_config(
-    page_title="언덕 등반 탐색 vs A* 탐색",
-    layout="centered"
-)
+st.set_page_config(page_title="탐색 알고리즘 게임")
 
-st.title("🧭 언덕 등반 탐색 vs A* 탐색")
+# --------------------
+# 그래프
+# --------------------
 
-# ------------------
-# 지도 설정
-# ------------------
-grid = [
-    [0,0,0,0,0],
-    [0,1,1,1,0],
-    [0,0,0,1,0],
-    [0,1,0,0,0],
-    [0,0,0,1,0]
-]
+graph = {
 
-ROWS = len(grid)
-COLS = len(grid[0])
+    "서울": {
+        "홍천":50,
+        "천안":100,
+        "음성":100
+    },
 
-start = (0, 0)
-goal = (4, 4)
+    "홍천": {
+        "서울":50,
+        "음성":80,
+        "제천":60
+    },
 
-algorithm = st.radio(
-    "탐색 알고리즘 선택",
-    ["언덕 등반 탐색", "A* 탐색"]
-)
+    "천안": {
+        "서울":100,
+        "음성":40,
+        "대전":50
+    },
 
-# ------------------
-# 휴리스틱 함수
-# ------------------
-def heuristic(pos):
-    return abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
+    "음성": {
+        "서울":100,
+        "홍천":80,
+        "천안":40,
+        "상주":100,
+        "의성":200
+    },
 
-# ------------------
-# 인접 노드 찾기
-# ------------------
-def get_neighbors(pos):
+    "제천": {
+        "홍천":60,
+        "안동":60
+    },
 
-    r, c = pos
+    "안동": {
+        "제천":60,
+        "의성":50
+    },
 
-    directions = [
-        (-1, 0),
-        (1, 0),
-        (0, -1),
-        (0, 1)
-    ]
+    "상주": {
+        "음성":100,
+        "부산":110
+    },
 
-    neighbors = []
+    "의성": {
+        "음성":200,
+        "안동":50,
+        "울산":120
+    },
 
-    for dr, dc in directions:
+    "대전": {
+        "천안":50,
+        "대구":90
+    },
 
-        nr = r + dr
-        nc = c + dc
+    "대구": {
+        "대전":90,
+        "부산":60
+    },
 
-        if 0 <= nr < ROWS and 0 <= nc < COLS:
-            if grid[nr][nc] == 0:
-                neighbors.append((nr, nc))
+    "울산": {
+        "의성":120,
+        "부산":40
+    },
 
-    return neighbors
+    "부산": {
+        "상주":110,
+        "대구":60,
+        "울산":40
+    }
+}
 
-# ------------------
-# 언덕 등반 탐색
-# ------------------
-def hill_climbing():
+# --------------------
+# 휴리스틱
+# --------------------
 
-    current = start
+h = {
+    "서울":0,
+    "홍천":50,
+    "천안":100,
+    "음성":100,
+    "제천":110,
+    "안동":120,
+    "대전":150,
+    "상주":200,
+    "의성":220,
+    "대구":240,
+    "울산":340,
+    "부산":999
+}
 
-    path = [current]
+# --------------------
+# 세션 상태
+# --------------------
 
-    while current != goal:
+if "current" not in st.session_state:
+    st.session_state.current = "부산"
 
-        neighbors = get_neighbors(current)
+if "path" not in st.session_state:
+    st.session_state.path = ["부산"]
 
-        if not neighbors:
-            return path, False
+if "cost" not in st.session_state:
+    st.session_state.cost = 0
 
-        current_h = heuristic(current)
+# --------------------
+# 화면
+# --------------------
 
-        best_neighbor = min(
-            neighbors,
-            key=heuristic
-        )
+st.title("🚗 서울로 가는 길")
 
-        best_h = heuristic(best_neighbor)
+st.write("목표 : 서울 도착")
 
-        if best_h >= current_h:
-            return path, False
+st.subheader(f"현재 위치 : {st.session_state.current}")
 
-        current = best_neighbor
-        path.append(current)
+st.write(f"누적 이동 시간 : {st.session_state.cost}분")
 
-    return path, True
+st.write("이동 경로")
 
-# ------------------
-# A* 탐색
-# ------------------
-def a_star():
+st.write(" → ".join(st.session_state.path))
 
-    pq = []
+# --------------------
+# 도착
+# --------------------
 
-    heapq.heappush(
-        pq,
-        (heuristic(start), 0, start)
-    )
+if st.session_state.current == "서울":
 
-    came_from = {}
-    g_score = {start: 0}
+    st.success("서울 도착!")
 
-    visited = []
+    st.balloons()
 
-    while pq:
+    if st.button("다시 시작"):
 
-        f, g, current = heapq.heappop(pq)
+        st.session_state.current = "부산"
+        st.session_state.path = ["부산"]
+        st.session_state.cost = 0
 
-        visited.append(current)
+        st.rerun()
 
-        if current == goal:
+# --------------------
+# 이동
+# --------------------
 
-            path = []
+else:
 
-            while current in came_from:
-                path.append(current)
-                current = came_from[current]
+    neighbors = graph[st.session_state.current]
 
-            path.append(start)
-            path.reverse()
+    st.subheader("선택 가능한 도시")
 
-            return path, visited
+    for city, distance in neighbors.items():
 
-        for neighbor in get_neighbors(current):
+        col1, col2 = st.columns([4,1])
 
-            tentative_g = g + 1
+        with col1:
 
-            if (
-                neighbor not in g_score
-                or tentative_g < g_score[neighbor]
+            st.write(
+                f"{city} "
+                f"(이동시간 {distance}분, "
+                f"h={h[city]})"
+            )
+
+        with col2:
+
+            if st.button(
+                f"선택",
+                key=city
             ):
 
-                g_score[neighbor] = tentative_g
+                st.session_state.cost += distance
 
-                f_score = tentative_g + heuristic(neighbor)
+                st.session_state.current = city
 
-                heapq.heappush(
-                    pq,
-                    (f_score,
-                     tentative_g,
-                     neighbor)
-                )
+                st.session_state.path.append(city)
 
-                came_from[neighbor] = current
-
-    return [], visited
-
-# ------------------
-# 지도 출력
-# ------------------
-def draw_map(path=None, current=None):
-
-    board = ""
-
-    for r in range(ROWS):
-
-        for c in range(COLS):
-
-            pos = (r, c)
-
-            if pos == current:
-                board += "🟠"
-
-            elif pos == start:
-                board += "🟢"
-
-            elif pos == goal:
-                board += "🔴"
-
-            elif grid[r][c] == 1:
-                board += "⬛"
-
-            elif path and pos in path:
-                board += "🟦"
-
-            else:
-                board += "⬜"
-
-        board += "\n"
-
-    return board
-
-# ------------------
-# 초기 지도
-# ------------------
-st.subheader("지도")
-
-st.text(draw_map())
-
-st.markdown("""
-🟢 시작점  
-🔴 목표점  
-⬛ 장애물  
-🟦 탐색 경로  
-🟠 현재 위치
-""")
-
-# ------------------
-# 탐색 시작
-# ------------------
-if st.button("탐색 시작"):
-
-    placeholder = st.empty()
-
-    if algorithm == "언덕 등반 탐색":
-
-        path, success = hill_climbing()
-
-        st.subheader("탐색 과정")
-
-        for node in path:
-
-            placeholder.text(
-                draw_map(path, node)
-            )
-
-            time.sleep(0.8)
-
-        st.write("탐색 경로")
-
-        st.code(str(path))
-
-        if success:
-            st.success("목표 도달 성공!")
-        else:
-            st.error("지역 최적해(Local Optimum)에 빠져 실패!")
-
-    else:
-
-        path, visited = a_star()
-
-        st.subheader("탐색 과정")
-
-        current_path = []
-
-        for node in visited:
-
-            current_path.append(node)
-
-            placeholder.text(
-                draw_map(current_path, node)
-            )
-
-            time.sleep(0.3)
-
-        st.success("목표 도달 성공!")
-
-        st.write("최단 경로")
-
-        placeholder.text(
-            draw_map(path)
-        )
-
-        st.code(str(path))
+                st.rerun()
