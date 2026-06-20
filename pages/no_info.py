@@ -1,4 +1,4 @@
-import streamlit st
+import streamlit as st
 import graphviz
 
 # --- 1. 페이지 설정 및 디자인 CSS 주입 ---
