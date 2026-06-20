@@ -4,71 +4,72 @@ import graphviz
 # --- 1. 기본 페이지 설정 및 세련된 테마 적용 ---
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
+# 💡 수정 포인트: CSS와 HTML 선언 시 앞에 들여쓰기 공간을 완전히 없애야 문자로 깨지지 않습니다.
 st.markdown("""
 <style>
-    .main { background-color: #f8fafc; }
-    .sim-container {
-        background: linear-gradient(to bottom, #f0fdf4 0%, #ffffff 100%);
-        height: 160px;
-        border-radius: 16px;
-        position: relative;
-        overflow: hidden;
-        border: 1px solid #e2e8f0;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-    .land { background-color: #a3e635; width: 150px; height: 50px; position: absolute; bottom: 0; border-top: 3px solid #4d7c0f; }
-    .land-left { left: 0; border-radius: 0 16px 0 0; }
-    .land-right { right: 0; border-radius: 16px 0 0 0; }
-    .river { background-color: #38bdf8; height: 35px; position: absolute; bottom: 0; left: 150px; right: 150px; }
-    .char { font-size: 26px; position: absolute; transition: all 1.5s ease-in-out; }
-    .boat { font-size: 34px; position: absolute; bottom: 3px; transition: all 1.5s ease-in-out; }
-    
-    .game-over-overlay {
-        position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background-color: rgba(239, 68, 68, 0.85);
-        color: white;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        z-index: 10;
-        font-weight: bold;
-    }
-    .game-over-title { font-size: 32px; margin-bottom: 5px; animation: shake 0.5s infinite; }
-    .game-over-reason { font-size: 16px; opacity: 0.9; }
-    
-    @keyframes shake {
-        0% { transform: translate(1px, 1px) rotate(0deg); }
-        10% { transform: translate(-1px, -2px) rotate(-1deg); }
-        20% { transform: translate(-3px, 0px) rotate(1deg); }
-        30% { transform: translate(0px, 2px) rotate(0deg); }
-        40% { transform: translate(1px, -1px) rotate(1deg); }
-        50% { transform: translate(-1px, 2px) rotate(-1deg); }
-        60% { transform: translate(-3px, 1px) rotate(0deg); }
-        70% { transform: translate(2px, 1px) rotate(-1deg); }
-        80% { transform: translate(-1px, -1px) rotate(1deg); }
-        90% { transform: translate(2px, 2px) rotate(0deg); }
-        100% { transform: translate(1px, -2px) rotate(-1deg); }
-    }
-    
-    div.stButton > button {
-        border-radius: 24px !important;
-        border: 1px solid #cbd5e1 !important;
-        background-color: #ffffff !important;
-        color: #334155 !important;
-        font-weight: 600 !important;
-        padding: 10px 20px !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-        transition: all 0.2s ease-in-out !important;
-    }
-    div.stButton > button:hover {
-        border-color: #4f46e5 !important;
-        background-color: #f5f3ff !important;
-        color: #4f46e5 !important;
-        transform: translateY(-1px);
-    }
+.main { background-color: #f8fafc; }
+.sim-container {
+    background: linear-gradient(to bottom, #f0fdf4 0%, #ffffff 100%);
+    height: 160px;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+.land { background-color: #a3e635; width: 150px; height: 50px; position: absolute; bottom: 0; border-top: 3px solid #4d7c0f; }
+.land-left { left: 0; border-radius: 0 16px 0 0; }
+.land-right { right: 0; border-radius: 16px 0 0 0; }
+.river { background-color: #38bdf8; height: 35px; position: absolute; bottom: 0; left: 150px; right: 150px; }
+.char { font-size: 26px; position: absolute; transition: all 1.5s ease-in-out; }
+.boat { font-size: 34px; position: absolute; bottom: 3px; transition: all 1.5s ease-in-out; }
+
+.game-over-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(239, 68, 68, 0.85);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    font-weight: bold;
+}
+.game-over-title { font-size: 32px; margin-bottom: 5px; animation: shake 0.5s infinite; }
+.game-over-reason { font-size: 16px; opacity: 0.9; }
+
+@keyframes shake {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translate(-3px, 0px) rotate(1deg); }
+    30% { transform: translate(0px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(1deg); }
+    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translate(2px, 1px) rotate(-1deg); }
+    80% { transform: translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translate(2px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
+div.stButton > button {
+    border-radius: 24px !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #ffffff !important;
+    color: #334155 !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+    transition: all 0.2s ease-in-out !important;
+}
+div.stButton > button:hover {
+    border-color: #4f46e5 !important;
+    background-color: #f5f3ff !important;
+    color: #4f46e5 !important;
+    transform: translateY(-1px);
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -122,12 +123,13 @@ boat_pos = "22%" if f == 'L' else "68%"
 overlay_html = ""
 if game_over:
     overlay_html = f"""
-    <div class="game-over-overlay">
-        <div class="game-over-title">🚨 GAME OVER 🚨</div>
-        <div class="game-over-reason">{reason}</div>
-    </div>
-    """
+<div class="game-over-overlay">
+    <div class="game-over-title">🚨 GAME OVER 🚨</div>
+    <div class="game-over-reason">{reason}</div>
+</div>
+"""
 
+# 💡 수정 포인트: 문자열 시작 부분의 들여쓰기를 왼쪽 벽에 딱 붙였습니다.
 st.markdown(f"""
 <div class="sim-container">
     {overlay_html}
