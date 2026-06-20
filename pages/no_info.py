@@ -1,7 +1,7 @@
 import streamlit as st
 import graphviz
 
-# --- 1. 기본 페이지 설정 및 사이드바 테마 적용 ---
+# --- 1. 페이지 설정 및 디자인 CSS 주입 ---
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
 with st.sidebar:
@@ -11,6 +11,7 @@ with st.sidebar:
         ["깊이 우선 탐색 (DFS)", "너비 우선 탐색 (BFS)"]
     )
 
+# HTML/CSS 문자열의 시작점 들여쓰기를 벽에 바짝 붙여 깨짐 현상을 원천 차단합니다.
 st.markdown("""<style>
 .main { background-color: #f8fafc; }
 .sim-container {
@@ -29,7 +30,6 @@ st.markdown("""<style>
 .river { background-color: #38bdf8; height: 35px; position: absolute; bottom: 0; left: 150px; right: 150px; }
 .char { position: absolute; transition: all 1.2s ease-in-out; }
 .boat { position: absolute; bottom: 3px; transition: all 1.2s ease-in-out; }
-
 .game-over-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -44,22 +44,7 @@ st.markdown("""<style>
     animation: fadeIn 0.3s ease-in-out 1.2s forwards;
     opacity: 0;
 }
-.game-over-title { font-size: 32px; margin-bottom: 5px; animation: shake 0.5s infinite; }
-.game-over-reason { font-size: 16px; opacity: 0.9; }
 @keyframes fadeIn { to { opacity: 1; } }
-@keyframes shake {
-    0% { transform: translate(1px, 1px) rotate(0deg); }
-    10% { transform: translate(-1px, -2px) rotate(-1deg); }
-    20% { transform: translate(-3px, 0px) rotate(1deg); }
-    30% { transform: translate(0px, 2px) rotate(0deg); }
-    40% { transform: translate(1px, -1px) rotate(1deg); }
-    50% { transform: translate(-1px, 2px) rotate(-1deg); }
-    60% { transform: translate(-3px, 1px) rotate(0deg); }
-    70% { transform: translate(2px, 1px) rotate(-1deg); }
-    80% { transform: translate(-1px, -1px) rotate(1deg); }
-    90% { transform: translate(2px, 2px) rotate(0deg); }
-    100% { transform: translate(1px, -2px) rotate(-1deg); }
-}
 div.stButton > button {
     border-radius: 24px !important;
     border: 1px solid #cbd5e1 !important;
@@ -67,12 +52,10 @@ div.stButton > button {
     color: #334155 !important;
     font-weight: 600 !important;
     padding: 10px 20px !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-    transition: all 0.2s ease-in-out !important;
 }
 div.stButton > button:hover {
     border-color: #4f46e5 !important;
-    background-color: #f5f3ff !important;
+    background-color: #f5f3ff;
     color: #4f46e5 !important;
 }
 .timeline-box {
@@ -84,7 +67,6 @@ div.stButton > button:hover {
     align-items: center;
     gap: 10px;
     overflow-x: auto;
-    margin-top: 10px;
 }
 .timeline-node {
     background-color: #f1f5f9;
@@ -102,7 +84,7 @@ div.stButton > button:hover {
 }
 </style>""", unsafe_allow_html=True)
 
-# --- 2. 함수 선언 (이동 규칙 및 검증) ---
+# --- 2. 이동 제한 규칙 및 상태 검증 함수 ---
 def get_allowed_moves(current_state, history_list):
     f, w, s, c = current_state
     next_f = 'R' if f == 'L' else 'L'
@@ -114,7 +96,6 @@ def get_allowed_moves(current_state, history_list):
         ((next_f, w, s, next_f), "🥬 양배추와 함께 이동")
     ]
     for state, label in all_moves:
-        # 💡 핵심 교정: 농부(f)가 같이 타고 갈 대상과 '같은 강가'에 있는 상태여야만 합법적인 이동 후보가 됨
         if "🐺" in label and f != w: continue
         if "🐑" in label and f != s: continue
         if "🥬" in label and f != c: continue
@@ -124,11 +105,11 @@ def get_allowed_moves(current_state, history_list):
 
 def is_invalid(state):
     f, w, s, c = state
-    if w == s and f != w: return True, "늑대가 양을 해쳤습니다! 🐺"
-    if s == c and f != s: return True, "양이 양배추를 먹어치웠습니다! 🐑"
+    if w == s and f != w: return True, "농부가 없는 사이 늑대가 양을 공격했습니다! 🐺"
+    if s == c and f != s: return True, "농부가 없는 사이 양이 양배추를 먹어치웠습니다! 🐑"
     return False, ""
 
-# --- 3. 세션 상태 캐시 초기화 ---
+# --- 3. 세션 상태 분리 및 초기화 ---
 if 'dfs_history' not in st.session_state:
     st.session_state.dfs_history = [('L','L','L','L')]
 if 'bfs_history' not in st.session_state:
@@ -141,12 +122,10 @@ if 'bfs_current_preview' not in st.session_state:
     st.session_state.bfs_current_preview = ('L','L','L','L')
 if 'bfs_next_level_parent' not in st.session_state:
     st.session_state.bfs_next_level_parent = None
-if 'last_toast' not in st.session_state:
-    st.session_state.last_toast = None
 if 'current_mode_track' not in st.session_state:
     st.session_state.current_mode_track = search_mode
 
-# 사이드바 모드 전환 시 캐시 초기화
+# 사이드바 모드 교체 시 완벽 초기화
 if st.session_state.current_mode_track != search_mode:
     st.session_state.current_mode_track = search_mode
     st.session_state.dfs_history = [('L','L','L','L')]
@@ -155,10 +134,9 @@ if st.session_state.current_mode_track != search_mode:
     st.session_state.bfs_visited_candidates = set()
     st.session_state.bfs_current_preview = ('L','L','L','L')
     st.session_state.bfs_next_level_parent = None
-    st.session_state.last_toast = None
     st.rerun()
 
-# 모드별 매핑
+# 작동 모드 데이터 바인딩
 if search_mode == "깊이 우선 탐색 (DFS)":
     history = st.session_state.dfs_history
     curr = st.session_state.dfs_history[-1]
@@ -170,11 +148,7 @@ else:
 
 game_over, reason = is_invalid(curr)
 
-if game_over and st.session_state.last_toast != reason:
-    st.toast(f"🚨 {reason}", icon="🔥")
-    st.session_state.last_toast = reason
-
-# --- 4. 메인 화면 및 상단 시뮬레이션 박스 렌더링 ---
+# --- 4. 상단 레이아웃: 시뮬레이션 인터페이스 ---
 st.title(f"✨ {search_mode} 시뮬레이터")
 
 f, w, s, c = curr
@@ -183,93 +157,96 @@ boat_pos = "22%" if f == 'L' else "68%"
 
 overlay_html = ""
 if game_over:
-    overlay_html = f'<div class="game-over-overlay"><div class="game-over-title">🚨 GAME OVER 🚨</div><div class="game-over-reason">{reason}</div></div>'
+    overlay_html = f'<div class="game-over-overlay"><div style="font-size:32px; margin-bottom:5px;">🚨 GAME OVER 🚨</div><div style="font-size:16px; opacity:0.9;">{reason}</div></div>'
 
+# 💡 문자열 꼬임 우려를 완벽하게 차단하기 위해 순수 벽 정렬 포맷으로 주입
 st.markdown(f"""<div class="sim-container">
-    {overlay_html}
-    <div class="land land-left"></div>
-    <div class="land land-right"></div>
-    <div class="river"></div>
-    <div class="boat" style="left: {boat_pos}; font-size:34px;">🚣</div>
-    <div class="char" style="left: {pos(f, 15)}; bottom: 45px; font-size:26px;">👨‍🌾</div>
-    <div class="char" style="left: {pos(w, 50)}; bottom: 12px; font-size:26px;">🐺</div>
-    <div class="char" style="left: {pos(s, 75)}; bottom: 12px; font-size:26px;">🐑</div>
-    <div class="char" style="left: {pos(c, 100)}; bottom: 12px; font-size:26px;">🥬</div>
+{overlay_html}
+<div class="land land-left"></div>
+<div class="land land-right"></div>
+<div class="river"></div>
+<div class="boat" style="left: {boat_pos}; font-size:34px;">🚣</div>
+<div class="char" style="left: {pos(f, 15)}; bottom: 45px; font-size:26px;">👨‍🌾</div>
+<div class="char" style="left: {pos(w, 50)}; bottom: 12px; font-size:26px;">🐺</div>
+<div class="char" style="left: {pos(s, 75)}; bottom: 12px; font-size:26px;">🐑</div>
+<div class="char" style="left: {pos(c, 100)}; bottom: 12px; font-size:26px;">🥬</div>
 </div>""", unsafe_allow_html=True)
 
-# --- 5. 상태 제어 및 롤백/리셋 장치 ---
-if game_over:
-    if search_mode == "너비 우선 탐색 (BFS)":
-        st.warning("💡 BFS 모드 특성: 현재 분기는 실패 상태이지만, 형제 분기(너비)들이 열려 있습니다. 뒤로 가 다른 너비를 시도하세요.")
-        if st.button("⏪ 이 분기 취소하고 다른 너비 탐색하기 (뒤로 가기)"):
-            if len(st.session_state.bfs_history) > 1:
-                st.session_state.bfs_history.pop()
-                st.session_state.last_toast = None
-                parent = st.session_state.bfs_history[-1]
-                st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
-                st.session_state.bfs_visited_candidates = set()
-                st.session_state.bfs_current_preview = parent
-                st.session_state.bfs_next_level_parent = None
-                st.rerun()
-    else:
-        if st.button("🔄 처음부터 다시 탐색 (DFS 리셋)"):
-            st.session_state.dfs_history = [('L','L','L','L')]
-            st.session_state.last_toast = None
-            st.rerun()
-            
-elif curr == ('R','R','R','R'):
-    st.balloons(); st.snow()
-    st.success(f"🎉 **목표 상태 도달 성공!** {search_mode} 방식으로 안전하게 모두 이동시켰습니다.")
-    
-    st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
-    history_elements = []
-    for state in history:
-        state_str = "".join(state)
-        is_last = (state == history[-1])
-        active_class = "active" if is_last else ""
-        history_elements.append(f'<div class="timeline-node {active_class}">{state_str}</div>')
-    arrow_separator = ' <span style="font-weight:bold; color:gray;">➔</span> '
-    st.markdown(f'<div class="timeline-box">{"".join([e + (arrow_separator if i < len(history_elements)-1 else "") for i, e in enumerate(history_elements)])}</div>', unsafe_allow_html=True)
-    
-    if st.button("🔄 전체 초기화 후 다시 하기"):
-        st.session_state.dfs_history = [('L','L','L','L')]
-        st.session_state.bfs_history = [('L','L','L','L')]
-        st.session_state.bfs_queue = get_allowed_moves(('L','L','L','L'), [('L','L','L','L')])
-        st.session_state.bfs_visited_candidates = set()
-        st.session_state.bfs_current_preview = ('L','L','L','L')
-        st.session_state.bfs_next_level_parent = None
-        st.session_state.last_toast = None
-        st.rerun()
-
-else:
-    if search_mode == "너비 우선 탐색 (BFS)":
-        all_visited = len(st.session_state.bfs_visited_candidates) == len(st.session_state.bfs_queue)
-        if all_visited:
-            st.success("✅ **현재 깊이(Level)의 모든 너비 노드를 확인했습니다!**")
-            if st.session_state.bfs_next_level_parent is not None:
-                if st.button("🔽 안전한 다음 단계(Level) 노드로 탐색 확장하기", type="primary"):
-                    next_parent = st.session_state.bfs_next_level_parent
-                    st.session_state.bfs_history.append(next_parent)
-                    st.session_state.bfs_queue = get_allowed_moves(next_parent, st.session_state.bfs_history)
+# --- 5. 상태 제어 및 리셋부 ---
+col_info, _ = st.columns([3, 1])
+with col_info:
+    if game_over:
+        # 💡 요구사항 1 반영: 게임 오버 시 리셋/되돌아가기 버튼만 표출 (기존 하단 버튼은 아래 조건식에서 원천 숨김)
+        if search_mode == "너비 우선 탐색 (BFS)":
+            st.warning(f"🚨 탐색 실패: {reason}")
+            if st.button("⏪ 이 분기 취소하고 다른 너비 탐색하기 (뒤로 가기)"):
+                if len(st.session_state.bfs_history) > 1:
+                    st.session_state.bfs_history.pop()
+                    parent = st.session_state.bfs_history[-1]
+                    st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
                     st.session_state.bfs_visited_candidates = set()
-                    st.session_state.bfs_current_preview = next_parent
+                    st.session_state.bfs_current_preview = parent
                     st.session_state.bfs_next_level_parent = None
                     st.rerun()
-            else:
-                st.error("❌ 현재 레벨의 모든 너비 분기가 실패 상태입니다! 나아갈 수 있는 곳이 없습니다.")
-                if st.button("⏪ 한 단계 위 부모 노드로 롤백"):
-                    if len(st.session_state.bfs_history) > 1:
-                        st.session_state.bfs_history.pop()
-                        parent = st.session_state.bfs_history[-1]
-                        st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
+        else:
+            st.error(f"🚨 탐색 실패: {reason}")
+            if st.button("🔄 처음부터 다시 탐색 (DFS 리셋)"):
+                st.session_state.dfs_history = [('L','L','L','L')]
+                st.rerun()
+                
+    elif curr == ('R','R','R','R'):
+        st.balloons(); st.snow()
+        st.success(f"🎉 **목표 상태 도달 성공!** {search_mode} 방식으로 안전하게 탐색을 완료했습니다.")
+        st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
+        
+        history_elements = []
+        for state in history:
+            state_str = "".join(state)
+            is_last = (state == history[-1])
+            active_class = "active" if is_last else ""
+            history_elements.append(f'<div class="timeline-node {active_class}">{state_str}</div>')
+        arrow_separator = ' <span style="font-weight:bold; color:gray;">➔</span> '
+        st.markdown(f'<div class="timeline-box">{"".join([e + (arrow_separator if i < len(history_elements)-1 else "") for i, e in enumerate(history_elements)])}</div>', unsafe_allow_html=True)
+        
+        if st.button("🔄 전체 초기화 후 다시 하기"):
+            st.session_state.dfs_history = [('L','L','L','L')]
+            st.session_state.bfs_history = [('L','L','L','L')]
+            st.session_state.bfs_queue = get_allowed_moves(('L','L','L','L'), [('L','L','L','L')])
+            st.session_state.bfs_visited_candidates = set()
+            st.session_state.bfs_current_preview = ('L','L','L','L')
+            st.session_state.bfs_next_level_parent = None
+            st.rerun()
+
+    else:
+        # 정상 탐색 진행 중일 때만 작동하는 영역
+        if search_mode == "너비 우선 탐색 (BFS)":
+            all_visited = len(st.session_state.bfs_visited_candidates) == len(st.session_state.bfs_queue)
+            if all_visited:
+                st.success("✅ **현재 깊이(Level)의 모든 너비 분기 탐색 완료!**")
+                if st.session_state.bfs_next_level_parent is not None:
+                    if st.button("🔽 안전함이 확인된 다음 깊이(Level)로 트리 확장하기", type="primary"):
+                        next_parent = st.session_state.bfs_next_level_parent
+                        st.session_state.bfs_history.append(next_parent)
+                        st.session_state.bfs_queue = get_allowed_moves(next_parent, st.session_state.bfs_history)
                         st.session_state.bfs_visited_candidates = set()
-                        st.session_state.bfs_current_preview = parent
+                        st.session_state.bfs_current_preview = next_parent
                         st.session_state.bfs_next_level_parent = None
                         st.rerun()
+                else:
+                    st.error("❌ 현재 깊이의 모든 너비 분기가 실패 구역입니다. 위로 롤백해야 합니다.")
+                    if st.button("⏪ 한 단계 위 부모 노드로 롤백"):
+                        if len(st.session_state.bfs_history) > 1:
+                            st.session_state.bfs_history.pop()
+                            parent = st.session_state.bfs_history[-1]
+                            st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
+                            st.session_state.bfs_visited_candidates = set()
+                            st.session_state.bfs_current_preview = parent
+                            st.session_state.bfs_next_level_parent = None
+                            st.rerun()
 
 # --- 6. 하단 레이아웃: 상태 공간 트리 그래프 빌드 ---
 st.markdown("---")
-st.write("🌲 **상태 공간 트리 (현재 레벨의 너비 탐색 진척도가 반영됩니다)**")
+st.write("🌲 **상태 공간 트리 (자동 최하단 스크롤 적용)**")
 
 dot = graphviz.Digraph()
 dot.attr(rankdir='TB', size='6,4!', ratio='fill')
@@ -325,31 +302,37 @@ scrollable_html = f"""<div id="scroll-container" style="border: 2px solid #e2e8f
 </script>"""
 st.components.v1.html(scrollable_html, height=280)
 
-# --- 7. 하단 선택 버튼 컨트롤러 ---
-if next_candidates and not (search_mode == "너비 우선 탐색 (BFS)" and len(st.session_state.bfs_visited_candidates) == len(st.session_state.bfs_queue)):
+# --- 7. 하단 탐색 제어 선택 버튼부 ---
+# 💡 요구사항 1 교정: 게임오버 및 정답 상태가 아닐 때만 하단 버튼이 빌드되도록 안전 장치 적용
+if next_candidates and not game_over and curr != ('R','R','R','R'):
     if search_mode == "깊이 우선 탐색 (DFS)":
         st.write("📍 **다음에 깊게 탐색할 대상을 선택하세요:**")
-    else:
-        st.write("📍 **이번 깊이(Level)에서 검사할 너비 노드들을 하나씩 모두 확인해 보세요:**")
-        
-    cols = st.columns(len(next_candidates))
-    for idx, (cand_state, label_text) in enumerate(next_candidates):
-        with cols[idx]:
-            btn_label = label_text
-            if search_mode == "너비 우선 탐색 (BFS)" and cand_state in st.session_state.bfs_visited_candidates:
-                is_cand_fail, _ = is_invalid(cand_state)
-                btn_label += " ❌ (확인됨)" if is_cand_fail else " ✔️ (안전)"
-                
-            if st.button(btn_label, key=f"action_btn_{idx}", use_container_width=True):
-                if search_mode == "깊이 우선 탐색 (DFS)":
+        cols = st.columns(len(next_candidates))
+        for idx, (cand_state, label_text) in enumerate(next_candidates):
+            with cols[idx]:
+                if st.button(label_text, key=f"action_btn_{idx}", use_container_width=True):
                     st.session_state.dfs_history.append(cand_state)
-                else:
-                    st.session_state.bfs_current_preview = cand_state
-                    st.session_state.bfs_visited_candidates.add(cand_state)
-                    is_cand_fail, _ = is_invalid(cand_state)
-                    if not is_cand_fail:
-                        st.session_state.bfs_next_level_parent = cand_state
-                st.rerun()
+                    st.rerun()
+    else:
+        # BFS는 모든 너비 요소를 채우기 전까지만 활성화
+        if len(st.session_state.bfs_visited_candidates) < len(st.session_state.bfs_queue):
+            st.write("📍 **이번 깊이(Level)에서 검사할 너비 노드들을 하나씩 모두 확인해 보세요:**")
+            cols = st.columns(len(next_candidates))
+            for idx, (cand_state, label_text) in enumerate(next_candidates):
+                with cols[idx]:
+                    btn_label = label_text
+                    if cand_state in st.session_state.bfs_visited_candidates:
+                        is_cand_fail, _ = is_invalid(cand_state)
+                        btn_label += " ❌ (실패)" if is_cand_fail else " ✔️ (안전)"
+                        
+                    if st.button(btn_label, key=f"action_btn_{idx}", use_container_width=True):
+                        st.session_state.bfs_current_preview = cand_state
+                        st.session_state.bfs_visited_candidates.add(cand_state)
+                        is_cand_fail, _ = is_invalid(cand_state)
+                        if not is_cand_fail:
+                            st.session_state.bfs_next_level_parent = cand_state
+                        st.rerun()
+
 elif not game_over and curr != ('R','R','R','R') and search_mode == "깊이 우선 탐색 (DFS)":
     st.warning("⚠️ **더 이상 이동할 수 있는 경로가 없습니다! (막다른 길)**")
     if st.button("⏪ 한 단계 뒤로 가기"):
