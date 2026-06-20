@@ -1,227 +1,349 @@
 import streamlit as st
-import heapq
-import time
+import pandas as pd
+import networkx as nx
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="탐색 알고리즘 비교", layout="wide")
+# =========================
+# matplotlib 한글 폰트 설정 (핵심 수정)
+# =========================
+plt.rcParams["font.family"] = ["Malgun Gothic", "AppleGothic", "NanumGothic", "DejaVu Sans"]
+plt.rcParams["axes.unicode_minus"] = False
 
-st.title("🧭 언덕 등반 탐색 vs A* 탐색")
-
-# -----------------------------
-# 상태 관리 (핵심 추가)
-# -----------------------------
-if "result" not in st.session_state:
-    st.session_state.result = None
-
-if "run" not in st.session_state:
-    st.session_state.run = False
-
-
-# 지도
-grid = [
-    [0,0,0,0,0],
-    [0,1,1,1,0],
-    [0,0,0,1,0],
-    [0,1,0,0,0],
-    [0,0,0,1,0]
-]
-
-ROWS = len(grid)
-COLS = len(grid[0])
-
-start = (0,0)
-goal = (4,4)
-
-algorithm = st.radio(
-    "알고리즘 선택",
-    ["언덕 등반 탐색", "A* 탐색"]
+st.set_page_config(
+    page_title="탐색 알고리즘 게임",
+    layout="wide"
 )
 
-def heuristic(pos):
-    return abs(pos[0]-goal[0]) + abs(pos[1]-goal[1])
+# =========================
+# 그래프
+# =========================
+graph = {
+    "서울": {"홍천":50, "천안":100, "음성":100},
+    "홍천": {"서울":50, "음성":80, "제천":60},
+    "천안": {"서울":100, "음성":40, "대전":50},
+    "음성": {"서울":100,"홍천":80,"천안":40,"상주":100,"의성":200},
+    "제천": {"홍천":60,"안동":60},
+    "안동": {"제천":60,"의성":50},
+    "상주": {"음성":100,"부산":110},
+    "의성": {"음성":200,"안동":50,"울산":120},
+    "대전": {"천안":50,"대구":90},
+    "대구": {"대전":90,"부산":60},
+    "울산": {"의성":120,"부산":40},
+    "부산": {"상주":110,"대구":60,"울산":40}
+}
 
-def get_neighbors(pos):
-    r, c = pos
+# =========================
+# 휴리스틱
+# =========================
+h = {
+    "서울":0,
+    "홍천":50,
+    "천안":100,
+    "음성":100,
+    "제천":110,
+    "안동":120,
+    "대전":150,
+    "상주":200,
+    "의성":220,
+    "대구":240,
+    "울산":340,
+    "부산":999
+}
 
-    directions = [(-1,0),(1,0),(0,-1),(0,1)]
-    neighbors = []
+# =========================
+# 상태 초기화 함수 (핵심 추가)
+# =========================
+def reset_game():
+    st.session_state.current = "부산"
+    st.session_state.cost = 0
+    st.session_state.score = 0
+    st.session_state.path = ["부산"]
+    st.session_state.game_started = False
+    st.session_state.popup = ""
 
-    for dr, dc in directions:
-        nr, nc = r + dr, c + dc
-        if 0 <= nr < ROWS and 0 <= nc < COLS:
-            if grid[nr][nc] == 0:
-                neighbors.append((nr,nc))
-    return neighbors
+# =========================
+# 세션 상태
+# =========================
+if "current" not in st.session_state:
+    st.session_state.current = "부산"
 
+if "cost" not in st.session_state:
+    st.session_state.cost = 0
 
-# -----------------------------
-# Hill Climbing
-# -----------------------------
-def hill_climbing():
-    current = start
-    path = [current]
+if "score" not in st.session_state:
+    st.session_state.score = 0
 
-    while current != goal:
-        neighbors = get_neighbors(current)
-        if not neighbors:
-            return path, False
+if "path" not in st.session_state:
+    st.session_state.path = ["부산"]
 
-        current_h = heuristic(current)
-        best_neighbor = min(neighbors, key=heuristic)
-        best_h = heuristic(best_neighbor)
+if "game_started" not in st.session_state:
+    st.session_state.game_started = False
 
-        if best_h >= current_h:
-            return path, False
+if "popup" not in st.session_state:
+    st.session_state.popup = ""
 
-        current = best_neighbor
-        path.append(current)
+# =========================
+# 제목
+# =========================
+st.title("🚗 탐색 알고리즘 게임")
 
-    return path, True
+algorithm = st.radio(
+    "탐색 알고리즘 선택",
+    ["최상 우선 탐색", "A* 탐색"],
+    horizontal=True
+)
 
+# =========================
+# 시작 화면
+# =========================
+if not st.session_state.game_started:
 
-# -----------------------------
-# A*
-# -----------------------------
-def a_star():
-    pq = []
-    heapq.heappush(pq, (heuristic(start), 0, start))
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
-    came_from = {}
-    g_score = {start:0}
-    visited = []
+    if algorithm == "최상 우선 탐색":
 
-    while pq:
-        f, g, current = heapq.heappop(pq)
-        visited.append(current)
-
-        if current == goal:
-            path = []
-            while current in came_from:
-                path.append(current)
-                current = came_from[current]
-            path.append(start)
-            path.reverse()
-            return path, visited
-
-        for neighbor in get_neighbors(current):
-            tentative_g = g + 1
-
-            if neighbor not in g_score or tentative_g < g_score[neighbor]:
-                g_score[neighbor] = tentative_g
-                f_score = tentative_g + heuristic(neighbor)
-
-                heapq.heappush(pq, (f_score, tentative_g, neighbor))
-                came_from[neighbor] = current
-
-    return [], visited
-
-
-# -----------------------------
-# 지도 출력 (폰트 수정 핵심)
-# -----------------------------
-def draw_map(path=None, current=None):
-
-    html = """
-    <table style='
-        border-collapse:collapse;
-        font-family: Arial, "Noto Sans KR", sans-serif;
-        font-size:14px;
-    '>
-    """
-
-    for r in range(ROWS):
-        html += "<tr>"
-
-        for c in range(COLS):
-
-            color = "white"
-
-            if grid[r][c] == 1:
-                color = "black"
-            if (r,c) == start:
-                color = "green"
-            if (r,c) == goal:
-                color = "red"
-            if path and (r,c) in path:
-                color = "skyblue"
-            if current and (r,c) == current:
-                color = "orange"
-
-            html += f"""
-            <td style="
-                width:45px;
-                height:45px;
-                border:1px solid gray;
-                background:{color};
-                text-align:center;
-                font-family: Arial, 'Noto Sans KR', sans-serif;
-            ">
-            </td>
-            """
-
-        html += "</tr>"
-
-    html += "</table>"
-
-    st.markdown(html, unsafe_allow_html=True)
-
-
-# -----------------------------
-# 실행 버튼
-# -----------------------------
-if st.button("탐색 시작"):
-    st.session_state.run = True
-    st.session_state.result = None
-
-    placeholder = st.empty()
-
-    if algorithm == "언덕 등반 탐색":
-
-        path, success = hill_climbing()
-
-        st.subheader("탐색 과정")
-
-        for node in path:
-            with placeholder.container():
-                draw_map(path, node)
-            time.sleep(0.8)
-
-        st.session_state.result = success
-        st.session_state.path = path
-
-        if success:
-            st.success("목표 도달 성공!")
-        else:
-            st.error("지역 최적해에 빠져 실패!")
+        st.markdown(
+        """
+        <div style='text-align:center'>
+        <h1>최상 우선 탐색</h1>
+        <h2>평가 함수 : h(n)</h2>
+        <p>현재 위치에서 목표까지의 예상 거리만 고려합니다.</p>
+        <p>h(n)이 가장 작은 노드를 선택합니다.</p>
+        <h3>최단 거리를 찾아보시겠습니까?</h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+        )
 
     else:
 
-        path, visited = a_star()
+        st.markdown(
+        """
+        <div style='text-align:center'>
+        <h1>A* 탐색</h1>
+        <h2>평가 함수 : f(n)=g(n)+h(n)</h2>
+        <p>g(n): 지금까지 이동 거리</p>
+        <p>h(n): 목표까지 예상 거리</p>
+        <p>f(n)이 가장 작은 노드를 선택합니다.</p>
+        <h3>최단 거리를 찾아보시겠습니까?</h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+        )
 
-        st.subheader("탐색 과정")
+    col1,col2,col3 = st.columns([2,1,2])
 
-        current_path = []
+    with col2:
+        if st.button("시작하기", use_container_width=True):
+            st.session_state.game_started = True
+            st.rerun()
 
-        for node in visited:
-            current_path.append(node)
+    st.stop()
 
-            with placeholder.container():
-                draw_map(current_path, node)
+# =========================
+# 팝업 (오답)
+# =========================
+if st.session_state.popup:
 
-            time.sleep(0.3)
+    st.markdown(
+    f"""
+    <div style="
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:white;
+    border:3px solid red;
+    border-radius:15px;
+    padding:30px;
+    z-index:9999;
+    text-align:center;
+    width:500px;
+    box-shadow:0 0 30px rgba(0,0,0,0.4);
+    ">
+    <h2>❌ 오답</h2>
+    <p>{st.session_state.popup}</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+    )
 
-        st.session_state.result = True
-        st.session_state.path = path
+    col1, col2 = st.columns(2)
 
-        st.success("목표 도달 성공!")
-        st.write("최단 경로:")
-        st.write(path)
+    with col1:
+        if st.button("확인"):
+            st.session_state.popup = ""
+            st.rerun()
 
+    with col2:
+        if st.button("🔄 다시 해보기"):
+            reset_game()
+            st.rerun()
 
-# -----------------------------
-# ❗ 다시 해보기 버튼 (핵심 추가)
-# -----------------------------
-if st.session_state.result is False:
-    if st.button("🔄 다시 해보기"):
-        st.session_state.result = None
-        st.session_state.run = False
+# =========================
+# 현재 상태
+# =========================
+current = st.session_state.current
+
+col_graph, col_info = st.columns([3,1])
+
+# =========================
+# 후보 계산
+# =========================
+candidates = []
+
+if current != "서울":
+    for city, dist in graph[current].items():
+        g = st.session_state.cost + dist
+        hh = h[city]
+        f = g + hh
+
+        candidates.append({
+            "도시": city,
+            "g": g,
+            "h": hh,
+            "f": f
+        })
+
+# =========================
+# 정답 계산
+# =========================
+if current != "서울":
+    if algorithm == "최상 우선 탐색":
+        correct_city = min(candidates, key=lambda x:x["h"])["도시"]
+    else:
+        correct_city = min(candidates, key=lambda x:x["f"])["도시"]
+
+# =========================
+# 그래프 생성
+# =========================
+G = nx.Graph()
+
+for city in graph:
+    for neighbor, cost in graph[city].items():
+        G.add_edge(city, neighbor, weight=cost)
+
+pos = {
+    "서울": (0,10),
+    "홍천": (2,9),
+    "천안": (0,7),
+    "음성": (2,7),
+    "제천": (4,8),
+    "안동": (6,7),
+    "상주": (4,5),
+    "의성": (6,5),
+    "대전": (1,3),
+    "대구": (4,2),
+    "울산": (7,1),
+    "부산": (6,-1)
+}
+
+colors = []
+
+for node in G.nodes():
+    if node == current:
+        colors.append("green")
+    elif node == "서울":
+        colors.append("red")
+    elif node in st.session_state.path:
+        colors.append("skyblue")
+    else:
+        colors.append("orange")
+
+fig, ax = plt.subplots(figsize=(8,8))
+
+nx.draw(
+    G,
+    pos,
+    with_labels=True,
+    node_color=colors,
+    node_size=2500,
+    font_size=11,
+    font_weight="bold",
+    font_family="Malgun Gothic",
+    ax=ax
+)
+
+nx.draw_networkx_edge_labels(
+    G,
+    pos,
+    edge_labels=nx.get_edge_attributes(G, "weight"),
+    ax=ax
+)
+
+with col_graph:
+    st.pyplot(fig)
+
+# =========================
+# 우측 패널
+# =========================
+with col_info:
+
+    st.metric("현재 위치", current)
+    st.metric("누적 비용", st.session_state.cost)
+    st.metric("점수", st.session_state.score)
+
+    st.write("### 이동 경로")
+    st.write(" → ".join(st.session_state.path))
+
+    if current != "서울":
+
+        st.write("### 후보 노드")
+
+        if algorithm == "최상 우선 탐색":
+
+            st.dataframe(
+                pd.DataFrame([
+                    {"도시":x["도시"], "h(n)":x["h"]}
+                    for x in candidates
+                ]),
+                hide_index=True
+            )
+
+        else:
+
+            st.dataframe(
+                pd.DataFrame([
+                    {"도시":x["도시"], "g(n)":x["g"], "h(n)":x["h"], "f(n)":x["f"]}
+                    for x in candidates
+                ]),
+                hide_index=True
+            )
+
+        st.write("### 노드 선택")
+
+        for city in graph[current]:
+
+            if st.button(city, use_container_width=True):
+
+                if city == correct_city:
+
+                    st.session_state.current = city
+                    st.session_state.path.append(city)
+                    st.session_state.cost += graph[current][city]
+                    st.session_state.score += 10
+
+                    st.rerun()
+
+                else:
+
+                    st.session_state.popup = (
+                        f"{algorithm}에서는 '{correct_city}'를 선택해야 합니다."
+                    )
+                    st.rerun()
+
+# =========================
+# 도착
+# =========================
+if current == "서울":
+
+    st.success("🎉 서울 도착!")
+    st.balloons()
+
+    st.write(f"총 이동 비용 : {st.session_state.cost}")
+    st.write(f"최종 점수 : {st.session_state.score}")
+    st.write(" → ".join(st.session_state.path))
+
+    if st.button("다시 시작"):
+        reset_game()
         st.rerun()
