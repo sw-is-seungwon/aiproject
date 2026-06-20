@@ -41,7 +41,7 @@ h = {
 }
 
 # =========================
-# 세로 확장 (유지)
+# 세로 확장
 # =========================
 Y_SCALE = 2.6
 
@@ -78,45 +78,12 @@ st.title("🚗 탐색 알고리즘 게임 (Greedy vs A*)")
 
 algo = st.radio("알고리즘", ["최상 우선 탐색", "A* 탐색"], horizontal=True)
 
-# =========================
-# 🔥 START 화면 + 평가함수 설명 추가
-# =========================
 if not st.session_state.started:
-
-    st.markdown("## 탐색 알고리즘 설명")
-
-    if algo == "최상 우선 탐색":
-
-        st.info("""
-### 최상 우선 탐색 (Greedy Best-First Search)
-
-- 평가 함수: **h(n)**
-- 현재 노드에서 목표까지의 추정 거리만 사용
-- 가장 작은 h(n)을 가진 노드를 선택
-
-👉 f(n) 사용하지 않음
-        """)
-
-    else:
-
-        st.info("""
-### A* 탐색
-
-- 평가 함수: **f(n) = g(n) + h(n)**
-- g(n): 시작점 → 현재까지 실제 비용
-- h(n): 현재 → 목표 추정 비용
-- f(n)이 가장 작은 노드를 선택
-        """)
-
     if st.button("시작하기"):
         st.session_state.started = True
         st.rerun()
-
     st.stop()
 
-# =========================
-# 현재 상태
-# =========================
 current = st.session_state.current
 
 # =========================
@@ -166,14 +133,6 @@ def draw():
             edge_text_y.append((y0+y1)/2)
             edge_text.append(str(w))
 
-    edge_trace = go.Scatter(
-        x=edge_x,
-        y=edge_y,
-        mode="lines",
-        line=dict(width=2, color="#888"),
-        hoverinfo="none"
-    )
-
     node_x, node_y, labels, colors = [], [], [], []
 
     for n in graph:
@@ -199,7 +158,26 @@ def draw():
         else:
             colors.append("orange")
 
-    node_trace = go.Scatter(
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=edge_x,
+        y=edge_y,
+        mode="lines",
+        line=dict(width=2, color="#888"),
+        hoverinfo="none"
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=edge_text_x,
+        y=edge_text_y,
+        mode="text",
+        text=edge_text,
+        textfont=dict(size=12),
+        hoverinfo="none"
+    ))
+
+    fig.add_trace(go.Scatter(
         x=node_x,
         y=node_y,
         mode="markers+text",
@@ -207,18 +185,19 @@ def draw():
         textposition="top center",
         marker=dict(size=35, color=colors),
         hoverinfo="text"
+    ))
+
+    # 🔥 핵심 추가 (이거 하나로 세로 늘어남 확실히 보임)
+    fig.update_layout(
+        height=850,
+        margin=dict(l=10, r=10, t=10, b=10),
+        yaxis=dict(
+            scaleanchor="x",
+            scaleratio=2.0
+        )
     )
 
-    weight_trace = go.Scatter(
-        x=edge_text_x,
-        y=edge_text_y,
-        mode="text",
-        text=edge_text,
-        textfont=dict(size=12),
-        hoverinfo="none"
-    )
-
-    return go.Figure([edge_trace, weight_trace, node_trace])
+    return fig
 
 # =========================
 # 출력
