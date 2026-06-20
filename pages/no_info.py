@@ -178,10 +178,13 @@ with col_info:
             st.warning(f"🚨 탐색 실패: {reason}")
             if st.button("⏪ 이 분기 취소하고 다른 너비 탐색하기 (뒤로 가기)"):
                 if len(st.session_state.bfs_history) > 1:
+                    # 현재 실패 상태 노드를 이력에서 제거
                     st.session_state.bfs_history.pop()
                     parent = st.session_state.bfs_history[-1]
+                    
+                    # 💡 버그 수정 핵심: 부모 노드로 돌아갈 때, 부모 기준의 다음 큐를 다시 짜고 
+                    # 이전 탐색의 방문 정보는 완전히 비워주어야(set 초기화) 다른 형제 버튼들이 하단에 다시 나타납니다.
                     st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
-                    # 💡 버그 수정: 뒤로 갈 때 방문 체크 기록을 완벽히 포맷팅해 주어야 하단 버튼이 다시 살아납니다.
                     st.session_state.bfs_visited_candidates = set()
                     st.session_state.bfs_current_preview = parent
                     st.session_state.bfs_next_level_parent = None
@@ -193,7 +196,6 @@ with col_info:
                 st.rerun()
                 
     elif curr == ('R','R','R','R'):
-        # 💡 피드백 반영: 구린 모션 제거 (st.balloons와 st.snow 삭제)
         st.success(f"🎉 **목표 상태 도달 성공!** {search_mode} 방식으로 안전하게 탐색을 완료했습니다.")
         st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
         
@@ -310,6 +312,7 @@ if next_candidates and not game_over and curr != ('R','R','R','R'):
                     st.session_state.dfs_history.append(cand_state)
                     st.rerun()
     else:
+        # 💡 보정: 현재 방문한 노드 수가 전체 큐 후보군보다 작을 때만 선택 버튼들이 그려집니다.
         if len(st.session_state.bfs_visited_candidates) < len(st.session_state.bfs_queue):
             st.write("📍 **이번 깊이(Level)에서 검사할 너비 노드들을 하나씩 모두 확인해 보세요:**")
             cols = st.columns(len(next_candidates))
