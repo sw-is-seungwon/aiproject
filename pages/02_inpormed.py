@@ -59,7 +59,7 @@ pos = {
 }
 
 # =========================
-# 상태 초기화
+# 상태
 # =========================
 def reset():
     st.session_state.current = "부산"
@@ -72,12 +72,9 @@ def reset():
 if "current" not in st.session_state:
     reset()
 
-# =========================
-# UI
-# =========================
 st.title("🚗 탐색 알고리즘 게임 (Greedy vs A*)")
 
-algo = st.radio("알고리즘 선택", ["최상 우선 탐색", "A* 탐색"], horizontal=True)
+algo = st.radio("알고리즘", ["최상 우선 탐색", "A* 탐색"], horizontal=True)
 
 if not st.session_state.started:
     if st.button("시작하기"):
@@ -88,14 +85,14 @@ if not st.session_state.started:
 current = st.session_state.current
 
 # =========================
-# 후보 생성 (핵심 수정: g 정확히 반영)
+# 후보 + 평가값
 # =========================
 candidates = []
 
 if current != "서울":
     for nxt, dist in graph[current].items():
 
-        g = st.session_state.cost + dist   # 누적 비용
+        g = st.session_state.cost + dist
         hh = h[nxt]
         f = g + hh
 
@@ -103,8 +100,7 @@ if current != "서울":
             "도시": nxt,
             "g": g,
             "h": hh,
-            "f": f,
-            "edge_cost": dist
+            "f": f
         })
 
     if algo == "최상 우선 탐색":
@@ -113,13 +109,12 @@ if current != "서울":
         correct = min(candidates, key=lambda x: x["f"])["도시"]
 
 # =========================
-# 그래프 (Plotly)
+# 그래프 (핵심 수정: 노드 값 표시)
 # =========================
 def draw():
 
     edge_x, edge_y, edge_text = [], [], []
 
-    # 간선 + 가중치 표시 (핵심 수정)
     for a in graph:
         for b, w in graph[a].items():
             x0, y0 = pos[a]
@@ -128,7 +123,6 @@ def draw():
             edge_x += [x0, x1, None]
             edge_y += [y0, y1, None]
 
-            # 가운데 텍스트 위치
             edge_text.append(((x0+x1)/2, (y0+y1)/2, str(w)))
 
     edge_trace = go.Scatter(
@@ -139,14 +133,24 @@ def draw():
         hoverinfo="none"
     )
 
-    # 노드
     node_x, node_y, labels, colors = [], [], [], []
 
     for n in graph:
         x, y = pos[n]
         node_x.append(x)
         node_y.append(y)
-        labels.append(n)
+
+        # =========================
+        # 🔥 핵심: 노드 값 표시 추가
+        # =========================
+        if algo == "최상 우선 탐색":
+            label = f"{n}\nh={h[n]}"
+        else:
+            # 현재 cost 기준 f 재계산
+            g = st.session_state.cost
+            label = f"{n}\nf={g + h[n]}"
+
+        labels.append(label)
 
         if n == current:
             colors.append("green")
@@ -167,34 +171,25 @@ def draw():
         hoverinfo="text"
     )
 
-    # 간선 숫자 (중요: 별도 trace)
     weight_trace = go.Scatter(
         x=[t[0] for t in edge_text],
         y=[t[1] for t in edge_text],
         mode="text",
         text=[t[2] for t in edge_text],
-        textfont=dict(size=12, color="black"),
+        textfont=dict(size=12),
         hoverinfo="none"
     )
 
-    fig = go.Figure([edge_trace, weight_trace, node_trace])
+    return go.Figure([edge_trace, weight_trace, node_trace])
 
-    fig.update_layout(
-        showlegend=False,
-        height=600,
-        margin=dict(l=10, r=10, t=10, b=10)
-    )
-
-    return fig
-
+# =========================
+# 출력
+# =========================
 col1, col2 = st.columns([3,1])
 
 with col1:
     st.plotly_chart(draw(), use_container_width=True)
 
-# =========================
-# 정보
-# =========================
 with col2:
 
     st.metric("현재", current)
@@ -229,21 +224,14 @@ with col2:
                     st.session_state.popup = f"오답! 정답: {correct}"
                     st.rerun()
 
-# =========================
-# 팝업
-# =========================
 if st.session_state.popup:
     st.error(st.session_state.popup)
 
     if st.button("확인"):
         st.session_state.popup = ""
 
-# =========================
-# 종료
-# =========================
 if current == "서울":
     st.success("도착!")
-
     st.write("총 비용:", st.session_state.cost)
     st.write("점수:", st.session_state.score)
 
