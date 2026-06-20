@@ -4,24 +4,15 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 # =========================
-# UI 스타일 (유지)
+# 폰트 (Cloud 안전)
 # =========================
-st.set_page_config(page_title="알고리즘 여행 게임", layout="wide")
+plt.rcParams["font.family"] = "DejaVu Sans"
+plt.rcParams["axes.unicode_minus"] = False
 
-st.markdown("""
-<style>
-.stApp {
-    background: linear-gradient(135deg, #fff1f7, #f0f8ff);
-}
-.stButton>button {
-    background: linear-gradient(135deg, #ffb6c1, #ffd1dc);
-    color: white;
-    border-radius: 15px;
-    border: none;
-    font-weight: bold;
-}
-</style>
-""", unsafe_allow_html=True)
+st.set_page_config(
+    page_title="탐색 알고리즘 게임",
+    layout="wide"
+)
 
 # =========================
 # 그래프
@@ -45,64 +36,105 @@ graph = {
 # 휴리스틱
 # =========================
 h = {
-    "서울":0,"홍천":50,"천안":100,"음성":100,"제천":110,
-    "안동":120,"대전":150,"상주":200,"의성":220,
-    "대구":240,"울산":340,"부산":999
+    "서울":0,
+    "홍천":50,
+    "천안":100,
+    "음성":100,
+    "제천":110,
+    "안동":120,
+    "대전":150,
+    "상주":200,
+    "의성":220,
+    "대구":240,
+    "울산":340,
+    "부산":999
 }
 
 # =========================
 # 상태 초기화
 # =========================
-def reset():
+def reset_game():
     st.session_state.current = "부산"
     st.session_state.cost = 0
     st.session_state.score = 0
     st.session_state.path = ["부산"]
-    st.session_state.started = False
-    st.session_state.selected_eval = None
-    st.session_state.eval_detail = None
+    st.session_state.game_started = False
+    st.session_state.popup = ""
 
 if "current" not in st.session_state:
-    reset()
+    reset_game()
+
+if "popup" not in st.session_state:
+    st.session_state.popup = ""
 
 # =========================
-# 제목
+# UI
 # =========================
-st.title("🚗 알고리즘 여행 게임 (평가함수 학습 버전)")
+st.title("🚗 탐색 알고리즘 게임 (Greedy vs A*)")
 
 algorithm = st.radio(
-    "탐색 알고리즘",
-    ["🌿 최상 우선 탐색", "⭐ A* 탐색"],
+    "탐색 알고리즘 선택",
+    ["최상 우선 탐색", "A* 탐색"],
     horizontal=True
 )
 
 # =========================
 # 시작 화면
 # =========================
-if not st.session_state.started:
+if not st.session_state.game_started:
 
-    st.markdown("""
-    <div style='text-align:center'>
-    <h2>🧭 서울까지 여행하기</h2>
-    <p>노드 선택마다 평가함수를 확인할 수 있어요</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if algorithm == "최상 우선 탐색":
+        st.markdown("""
+        <div style='text-align:center'>
+        <h2>최상 우선 탐색</h2>
+        <p>h(n) 기준으로 가장 가까운 노드 선택</p>
+        <h3>시작하시겠습니까?</h3>
+        </div>
+        """, unsafe_allow_html=True)
 
-    if st.button("🚀 시작하기"):
-        st.session_state.started = True
+    else:
+        st.markdown("""
+        <div style='text-align:center'>
+        <h2>A* 탐색</h2>
+        <p>f(n)=g(n)+h(n)</p>
+        <h3>시작하시겠습니까?</h3>
+        </div>
+        """, unsafe_allow_html=True)
+
+    if st.button("시작하기"):
+        st.session_state.game_started = True
         st.rerun()
 
     st.stop()
+
+# =========================
+# 팝업
+# =========================
+if st.session_state.popup:
+
+    st.error(st.session_state.popup)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("확인"):
+            st.session_state.popup = ""
+            st.rerun()
+
+    with col2:
+        if st.button("🔄 다시 시작"):
+            reset_game()
+            st.rerun()
 
 # =========================
 # 현재 상태
 # =========================
 current = st.session_state.current
 
-col_graph, col_info = st.columns([3,1])
+col_graph, col_info = st.columns([3, 1])
 
 # =========================
-# 후보 생성
+# 후보 계산
 # =========================
 candidates = []
 
@@ -121,45 +153,63 @@ if current != "서울":
         })
 
 # =========================
-# 정답
+# 정답 선택
 # =========================
 if current != "서울":
-    if algorithm == "🌿 최상 우선 탐색":
-        correct = min(candidates, key=lambda x: x["h"])["도시"]
+    if algorithm == "최상 우선 탐색":
+        correct_city = min(candidates, key=lambda x: x["h"])["도시"]
     else:
-        correct = min(candidates, key=lambda x: x["f"])["도시"]
+        correct_city = min(candidates, key=lambda x: x["f"])["도시"]
 
 # =========================
-# 그래프 (❗ 라벨 제거 핵심)
+# 그래프 생성
 # =========================
 G = nx.Graph()
 
-for c in graph:
-    for n, w in graph[c].items():
-        G.add_edge(c, n, weight=w)
+for city in graph:
+    for neighbor, cost in graph[city].items():
+        G.add_edge(city, neighbor, weight=cost)
 
-pos = nx.spring_layout(G, seed=7)
+pos = {
+    "서울": (0,10),
+    "홍천": (2,9),
+    "천안": (0,7),
+    "음성": (2,7),
+    "제천": (4,8),
+    "안동": (6,7),
+    "상주": (4,5),
+    "의성": (6,5),
+    "대전": (1,3),
+    "대구": (4,2),
+    "울산": (7,1),
+    "부산": (6,-1)
+}
 
 colors = []
 for node in G.nodes():
     if node == current:
-        colors.append("#ff69b4")
+        colors.append("green")
     elif node == "서울":
-        colors.append("#ff4d4d")
+        colors.append("red")
     elif node in st.session_state.path:
-        colors.append("#87cefa")
+        colors.append("skyblue")
     else:
-        colors.append("#ffd1dc")
+        colors.append("orange")
 
-fig, ax = plt.subplots(figsize=(7,6))
+fig, ax = plt.subplots(figsize=(8, 8))
 
-# ✔ 핵심: labels 제거 → 글자 안 씀
+# =========================
+# 🔥 핵심 수정: labels로 한글 유지
+# =========================
 nx.draw(
     G,
     pos,
-    with_labels=False,
+    with_labels=True,
+    labels={node: node for node in G.nodes()},  # 한글 그대로 출력
     node_color=colors,
-    node_size=2200,
+    node_size=2500,
+    font_size=11,
+    font_weight="bold",
     ax=ax
 )
 
@@ -178,80 +228,74 @@ with col_graph:
 # =========================
 with col_info:
 
-    st.markdown("### 🧭 현재 위치")
-    st.info(current)
+    st.metric("현재 위치", current)
+    st.metric("누적 비용", st.session_state.cost)
+    st.metric("점수", st.session_state.score)
 
-    st.markdown("### 📊 평가함수 설명")
+    st.write("### 이동 경로")
 
-    st.write("g(n): 지금까지 비용")
-    st.write("h(n): 목표까지 예상 비용")
-    st.write("f(n): g(n) + h(n)")
+    st.write(" → ".join([str(x) for x in st.session_state.path]))
 
     if current != "서울":
 
-        st.markdown("### 🌸 후보 노드")
+        st.write("### 후보 노드")
 
-        for c in candidates:
+        if algorithm == "최상 우선 탐색":
+            st.dataframe(
+                pd.DataFrame([
+                    {"도시": x["도시"], "h(n)": x["h"]}
+                    for x in candidates
+                ]),
+                hide_index=True
+            )
+        else:
+            st.dataframe(
+                pd.DataFrame([
+                    {
+                        "도시": x["도시"],
+                        "g(n)": x["g"],
+                        "h(n)": x["h"],
+                        "f(n)": x["f"]
+                    }
+                    for x in candidates
+                ]),
+                hide_index=True
+            )
 
-            if st.button(f"👉 {c['도시']}"):
+        st.write("### 이동 선택")
 
-                # =========================
-                # 평가함수 즉시 출력
-                # =========================
-                st.session_state.selected_eval = c
-                st.session_state.eval_detail = (
-                    f"📍 {c['도시']}\n"
-                    f"g(n) = {c['g']}\n"
-                    f"h(n) = {c['h']}\n"
-                    f"f(n) = {c['f']}"
-                )
+        for city in graph[current]:
 
-                if c["도시"] == correct:
+            if st.button(city, use_container_width=True):
 
-                    st.session_state.current = c["도시"]
-                    st.session_state.path.append(c["도시"])
-                    st.session_state.cost += graph[current][c["도시"]]
+                if city == correct_city:
+
+                    st.session_state.current = city
+                    st.session_state.path.append(city)
+                    st.session_state.cost += graph[current][city]
                     st.session_state.score += 10
 
                     st.rerun()
 
                 else:
-                    st.session_state.popup = f"❌ 정답은 {correct} 입니다"
+
+                    st.session_state.popup = (
+                        f"{algorithm}에서는 '{correct_city}' 노드가 정답입니다."
+                    )
                     st.rerun()
-
-    # =========================
-    # 평가함수 표시 영역 (핵심 추가)
-    # =========================
-    if st.session_state.eval_detail:
-        st.markdown("### 📌 선택한 노드 평가함수")
-        st.info(st.session_state.eval_detail)
-
-    st.markdown("### 🛤 이동 경로")
-    st.write(" → ".join(st.session_state.path))
-
-# =========================
-# 팝업
-# =========================
-if st.session_state.get("popup"):
-    st.error(st.session_state.popup)
-
-    if st.button("다시 도전하기 💪"):
-        reset()
-        st.rerun()
 
 # =========================
 # 도착
 # =========================
 if current == "서울":
 
-    st.success("🎉 서울 도착!")
-
+    st.success("🎉 목표 도착!")
     st.balloons()
 
-    st.write("총 비용:", st.session_state.cost)
-    st.write("점수:", st.session_state.score)
-    st.write("경로:", " → ".join(st.session_state.path))
+    st.write(f"총 비용: {st.session_state.cost}")
+    st.write(f"점수: {st.session_state.score}")
+    st.write(" → ".join([str(x) for x in st.session_state.path]))
 
     if st.button("다시 시작"):
-        reset()
+        reset_game()
         st.rerun()
