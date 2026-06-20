@@ -4,8 +4,7 @@ import graphviz
 # --- 1. 기본 페이지 설정 및 세련된 테마 적용 ---
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
-# CSS 스타일 정의
-css_style = """
+st.markdown("""
 <style>
     .main { background-color: #f8fafc; }
     .sim-container {
@@ -71,9 +70,7 @@ css_style = """
         transform: translateY(-1px);
     }
 </style>
-"""
-# 💡 핵심 안전장치: 혹시 모를 특수 유령 공백(\\xa0)을 일반 공백으로 강제 치환
-st.markdown(css_style.replace('\xa0', ' '), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # --- 2. 게임 로직 및 세션 초기화 ---
 if 'history' not in st.session_state:
@@ -131,8 +128,7 @@ if game_over:
     </div>
     """
 
-# 💡 HTML 내부의 숨은 공백까지 싹 다 일반 공백으로 강제 치환하여 브라우저에 전달합니다.
-sim_html = f"""
+st.markdown(f"""
 <div class="sim-container">
     {overlay_html}
     <div class="land land-left"></div>
@@ -144,8 +140,7 @@ sim_html = f"""
     <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
     <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
 </div>
-"""
-st.markdown(sim_html.replace('\xa0', ' '), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # --- 5. 안내 문구 및 제어부 ---
 col_info, col_ctrl = st.columns([3, 1])
@@ -215,7 +210,7 @@ scrollable_html = f"""
     }};
 </script>
 """
-st.components.v1.html(scrollable_html.replace('\xa0', ' '), height=280)
+st.components.v1.html(scrollable_html, height=280)
 
 # --- 7. 선택기 ---
 if next_candidates:
