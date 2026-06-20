@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit st
 import graphviz
 
 # --- 1. 페이지 설정 및 디자인 CSS 주입 ---
@@ -135,7 +135,7 @@ if st.session_state.current_mode_track != search_mode:
     st.session_state.bfs_next_level_parent = None
     st.rerun()
 
-# 작동 모드 데이터 바인딩
+# 💡 핵심 수정 1: 탐색 대상(next_candidates) 결정식을 모드별로 완전히 분리 격리
 if search_mode == "깊이 우선 탐색 (DFS)":
     history = st.session_state.dfs_history
     curr = st.session_state.dfs_history[-1]
@@ -147,7 +147,6 @@ else:
 
 game_over, reason = is_invalid(curr)
 
-# 💡 요구사항 2 반영: 텍스트 문구 안내판을 팝업창(Toast) 형태로 송출 (중복 토스트 방지 포함)
 if game_over:
     st.toast(f"🚨 {reason}", icon="🔥")
 
@@ -179,13 +178,12 @@ col_info, _ = st.columns([3, 1])
 with col_info:
     if game_over:
         if search_mode == "너비 우선 탐색 (BFS)":
-            # 💡 기존 시뮬레이션 밑에 뜨던 안 예쁜 st.warning 경고문 문구 완전 박멸
             if st.button("⏪ 이 분기 취소하고 다른 너비 탐색하기 (뒤로 가기)"):
                 if len(st.session_state.bfs_history) > 1:
                     st.session_state.bfs_history.pop()
                     parent = st.session_state.bfs_history[-1]
                     
-                    # 💡 버그 3 해결 핵심: 뒤로 가기를 할 때 부모 노드 기준의 합법적 이동 큐를 '완전 재동기화'해 주어야 버튼이 다시 살아납니다!
+                    # 💡 핵심 수정 2: BFS 뒤로가기 동작 시 부모 노드에 귀속된 온전한 다음 큐 후보군을 재생성
                     st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
                     st.session_state.bfs_visited_candidates = set()
                     st.session_state.bfs_current_preview = parent
@@ -246,7 +244,7 @@ with col_info:
 
 # --- 6. 하단 레이아웃: 상태 공간 트리 그래프 빌드 ---
 st.markdown("---")
-st.write("🌲 **상태 공간 트리 (자동 최하단 Скрол 적용)**")
+st.write("🌲 **상태 공간 트리 (자동 최하단 스크롤 적용)**")
 
 dot = graphviz.Digraph()
 dot.attr(rankdir='TB', size='6,4!', ratio='fill')
