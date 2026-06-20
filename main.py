@@ -115,7 +115,7 @@ with col1:
     )
     # 실제 구현된 페이지로 이동하는 버튼 (사이드바 이동 안내 또는 직접 링크)
     if st.button("무정보 탐색 실험실 입장 👉", key="btn_uninformed", use_container_width=True):
-        st.info("왼쪽 사이드바 메뉴에서 **'무정보 탐색'** 페이지를 선택해 주세요!")
+        st.info("왼쪽 사이드바 메뉴에서 no info 페이지를 선택해 주세요!")
 
 with col2:
     st.markdown(
@@ -135,7 +135,7 @@ with col2:
         unsafe_allow_html=True
     )
     if st.button("정보 이용 탐색 실험실 입장 👉", key="btn_informed", use_container_width=True):
-        st.info("왼쪽 사이드바 메뉴에서 **'정보 이용 탐색'** 페이지를 선택해 주세요!")
+        st.info("왼쪽 사이드바 메뉴에서 inpormed 페이지를 선택해 주세요!")
 
 # 5. 하단 가이드 팁
 st.write("---")
