@@ -41,7 +41,7 @@ h = {
 }
 
 # =========================
-# 세로 확장
+# 🔥 세로만 확장 (핵심)
 # =========================
 Y_SCALE = 2.6
 
@@ -70,6 +70,7 @@ def reset():
     st.session_state.path = ["부산"]
     st.session_state.started = False
     st.session_state.popup = ""
+    st.session_state.success = False   # 🔥 추가
 
 if "current" not in st.session_state:
     reset()
@@ -78,10 +79,17 @@ st.title("🚗 탐색 알고리즘 게임 (Greedy vs A*)")
 
 algo = st.radio("알고리즘", ["최상 우선 탐색", "A* 탐색"], horizontal=True)
 
+# =========================
+# 시작 화면 (변경 없음)
+# =========================
 if not st.session_state.started:
+
+    st.info("알고리즘 설명을 확인 후 시작하세요.")
+
     if st.button("시작하기"):
         st.session_state.started = True
         st.rerun()
+
     st.stop()
 
 current = st.session_state.current
@@ -93,7 +101,6 @@ candidates = []
 
 if current != "서울":
     for nxt, dist in graph[current].items():
-
         g = st.session_state.cost + dist
         hh = h[nxt]
         f = g + hh
@@ -187,14 +194,9 @@ def draw():
         hoverinfo="text"
     ))
 
-    # 🔥 핵심 추가 (이거 하나로 세로 늘어남 확실히 보임)
     fig.update_layout(
         height=850,
-        margin=dict(l=10, r=10, t=10, b=10),
-        yaxis=dict(
-            scaleanchor="x",
-            scaleratio=2.0
-        )
+        margin=dict(l=10, r=10, t=10, b=10)
     )
 
     return fig
@@ -230,18 +232,37 @@ with col2:
                     st.session_state.cost += graph[current][nxt]
                     st.session_state.score += 10
                     st.rerun()
+
                 else:
                     st.session_state.popup = f"오답! 정답: {correct}"
                     st.rerun()
 
-if st.session_state.popup:
-    st.error(st.session_state.popup)
+                    st.error(st.session_state.popup)
 
-    if st.button("확인"):
-        st.session_state.popup = ""
+# =========================
+# 🎉 정답 도착 효과
+# =========================
+if current == "서울" and not st.session_state.success:
 
-if current == "서울":
-    st.success("도착!")
+    st.session_state.success = True
+
+    st.success("🎉 서울 도착!")
+
+    st.balloons()
+
+    st.markdown(
+        """
+        <div style="
+        text-align:center;
+        font-size:24px;
+        font-weight:bold;
+        color:#2ecc71;">
+        🎊 탐색 성공! 최적 경로 도달 🎊
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
     st.write("총 비용:", st.session_state.cost)
     st.write("점수:", st.session_state.score)
 
