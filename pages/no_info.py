@@ -115,7 +115,6 @@ def is_invalid(state):
 curr = st.session_state.history[-1]
 game_over, reason = is_invalid(curr)
 
-# 토스트 팝업 알림 (한 번만 뜨도록 제어)
 if game_over and st.session_state.last_toast != reason:
     st.toast(f"🚨 {reason}", icon="🔥")
     st.session_state.last_toast = reason
@@ -125,7 +124,6 @@ f, w, s, c = curr
 pos = lambda side, offset: f"{offset}px" if side == 'L' else f"calc(100% - {offset + 25}px)"
 boat_pos = "22%" if f == 'L' else "68%"
 
-# 기본 시뮬레이션 HTML 박스 구성
 overlay_html = ""
 if game_over:
     overlay_html = f"""
@@ -134,21 +132,6 @@ if game_over:
         <div class="game-over-reason">{reason}</div>
     </div>
     """
-
-# 💡 핵심 수정: 반드시 unsafe_allow_html=True가 포함되어 있어야 합니다!
-st.markdown(f"""
-    <div class="sim-container">
-        {overlay_html}
-        <div class="land land-left"></div>
-        <div class="land land-right"></div>
-        <div class="river"></div>
-        <div class="boat" style="left: {boat_pos};">🚣</div>
-        <div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
-        <div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
-        <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
-        <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
-    </div>
-""", unsafe_allow_html=True) 
 
 st.markdown(f"""
     <div class="sim-container">
@@ -196,14 +179,12 @@ next_candidates = []
 if not game_over and curr != ('R','R','R','R'):
     next_candidates = get_allowed_moves(curr)
 
-# Graphviz 노드 디자인 수정 (크기 확 키우기, 글꼴 크기 상향)
 dot = graphviz.Digraph()
 dot.attr(rankdir='TB', size='6,4!', ratio='fill')
-# 노드 형태를 box형태로 변경하고 크기를 유동적으로 텍스트에 맞춤
 dot.attr('node', shape='box', style='filled,rounded', width='1.0', height='0.4', fixedsize='false', fontsize='12', fontname="Arial")
 
 for i, state in enumerate(st.session_state.history):
-    node_lbl = " - ".join(state)  # 가독성 확보를 위해 하이픈 추가
+    node_lbl = " - ".join(state)
     if i == len(st.session_state.history) - 1:
         dot.node(f"h_{i}", node_lbl, color="#4f46e5", fillcolor="#6366f1", fontcolor="white", penwidth="2")
     else:
@@ -218,7 +199,6 @@ for idx, (cand_state, label_text) in enumerate(next_candidates):
 
 svg_data = dot.pipe(format='svg').decode('utf-8')
 
-# JS 코드를 삽입하여 컴포넌트 로드 직후 최하단으로 부드럽게 스크롤 이동시킴
 scrollable_html = f"""
 <div id="scroll-container" style="border: 2px solid #e2e8f0; border-radius: 12px; height: 260px; overflow-y: auto; overflow-x: hidden; padding: 10px; background-color: white; display: flex; justify-content: center;">
     <div>{svg_data}</div>
@@ -230,7 +210,6 @@ scrollable_html = f"""
             container.scrollTop = container.scrollHeight;
         }}
     }}
-    // DOM 로드 및 안전한 지연 처리를 통해 확실히 끝까지 내림
     window.onload = function() {{
         setTimeout(scrollToBottom, 50);
     }};
