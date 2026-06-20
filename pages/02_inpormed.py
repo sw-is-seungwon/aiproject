@@ -41,21 +41,21 @@ h = {
 }
 
 # =========================
-# 위치
+# 🔥 세로형 레이아웃 (핵심 수정)
 # =========================
 pos = {
-    "서울": (0,10),
-    "홍천": (2,9),
-    "천안": (0,7),
-    "음성": (2,7),
-    "제천": (4,8),
-    "안동": (6,7),
-    "상주": (4,5),
-    "의성": (6,5),
-    "대전": (1,3),
-    "대구": (4,2),
-    "울산": (7,1),
-    "부산": (6,-1)
+    "서울": (0,12),
+    "홍천": (0,10),
+    "천안": (-2,8),
+    "음성": (2,8),
+    "제천": (-3,6),
+    "안동": (3,6),
+    "대전": (-2,4),
+    "상주": (2,4),
+    "대구": (2,2),
+    "울산": (4,1),
+    "의성": (1,5),
+    "부산": (0,0)
 }
 
 # =========================
@@ -85,7 +85,7 @@ if not st.session_state.started:
 current = st.session_state.current
 
 # =========================
-# 후보 + 평가값
+# 후보 + 평가 (Greedy = h / A* = f)
 # =========================
 candidates = []
 
@@ -103,13 +103,14 @@ if current != "서울":
             "f": f
         })
 
+    # 🔥 핵심 수정: Greedy는 h만 사용
     if algo == "최상 우선 탐색":
         correct = min(candidates, key=lambda x: x["h"])["도시"]
     else:
         correct = min(candidates, key=lambda x: x["f"])["도시"]
 
 # =========================
-# 그래프 (핵심 수정: 노드 값 표시)
+# 그래프
 # =========================
 def draw():
 
@@ -140,17 +141,12 @@ def draw():
         node_x.append(x)
         node_y.append(y)
 
-        # =========================
-        # 🔥 핵심: 노드 값 표시 추가
-        # =========================
+        # 🔥 노드 값 표시
         if algo == "최상 우선 탐색":
-            label = f"{n}\nh={h[n]}"
+            labels.append(f"{n}\nh={h[n]}")
         else:
-            # 현재 cost 기준 f 재계산
             g = st.session_state.cost
-            label = f"{n}\nf={g + h[n]}"
-
-        labels.append(label)
+            labels.append(f"{n}\nf={g + h[n]}")
 
         if n == current:
             colors.append("green")
@@ -180,7 +176,14 @@ def draw():
         hoverinfo="none"
     )
 
-    return go.Figure([edge_trace, weight_trace, node_trace])
+    fig = go.Figure([edge_trace, weight_trace, node_trace])
+
+    fig.update_layout(
+        height=800,   # 🔥 세로 강조
+        margin=dict(l=10, r=10, t=10, b=10)
+    )
+
+    return fig
 
 # =========================
 # 출력
@@ -201,26 +204,28 @@ with col2:
 
     if current != "서울":
 
-        st.write("### 후보")
-
-        st.dataframe(pd.DataFrame(candidates), hide_index=True)
-
-        st.write("### 이동")
+        # 🔥 Greedy일 때 h 중심 표시
+        if algo == "최상 우선 탐색":
+            st.write("### 후보 (h 기준)")
+            st.dataframe(
+                pd.DataFrame([{"도시":c["도시"], "h(n)":c["h"]} for c in candidates]),
+                hide_index=True
+            )
+        else:
+            st.write("### 후보 (f 기준)")
+            st.dataframe(pd.DataFrame(candidates), hide_index=True)
 
         for nxt in graph[current]:
 
             if st.button(nxt, use_container_width=True):
 
                 if nxt == correct:
-
                     st.session_state.current = nxt
                     st.session_state.path.append(nxt)
                     st.session_state.cost += graph[current][nxt]
                     st.session_state.score += 10
                     st.rerun()
-
                 else:
-
                     st.session_state.popup = f"오답! 정답: {correct}"
                     st.rerun()
 
