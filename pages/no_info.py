@@ -4,7 +4,7 @@ import graphviz
 # --- 1. 기본 페이지 설정 및 세련된 테마 적용 ---
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
-# CSS 스타일 정의 (문자열 시작점에 들여쓰기를 전부 제거)
+# CSS 스타일 정의 (속도 조절 및 애니메이션 딜레이 반영)
 st.markdown("""
 <style>
 .main { background-color: #f8fafc; }
@@ -22,9 +22,12 @@ st.markdown("""
 .land-left { left: 0; border-radius: 0 16px 0 0; }
 .land-right { right: 0; border-radius: 16px 0 0 0; }
 .river { background-color: #38bdf8; height: 35px; position: absolute; bottom: 0; left: 150px; right: 150px; }
-.char { font-size: 26px; position: absolute; transition: all 1.5s ease-in-out; }
-.boat { font-size: 34px; position: absolute; bottom: 3px; transition: all 1.5s ease-in-out; }
 
+/* 1. 이동 속도를 1.5s -> 3.0s로 변경하여 더 여유롭게 이동 */
+.char { font-size: 26px; position: absolute; transition: all 3.0s ease-in-out; }
+.boat { font-size: 34px; position: absolute; bottom: 3px; transition: all 3.0s ease-in-out; }
+
+/* 2. 캐릭터 이동(3초)이 끝난 후 게임오버 창이 뜨도록 3초 딜레이 및 페이드인 애니메이션 추가 */
 .game-over-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -36,9 +39,15 @@ st.markdown("""
     align-items: center;
     z-index: 10;
     font-weight: bold;
+    animation: fadeIn 0.5s ease-in-out 3.0s forwards;
+    opacity: 0; /* 처음에는 안 보임 */
 }
 .game-over-title { font-size: 32px; margin-bottom: 5px; animation: shake 0.5s infinite; }
 .game-over-reason { font-size: 16px; opacity: 0.9; }
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
 
 @keyframes shake {
     0% { transform: translate(1px, 1px) rotate(0deg); }
@@ -69,6 +78,33 @@ div.stButton > button:hover {
     background-color: #f5f3ff !important;
     color: #4f46e5 !important;
     transform: translateY(-1px);
+}
+
+/* 타임라인 스타일 */
+.timeline-box {
+    background-color: #ffffff;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    margin-top: 10px;
+}
+.timeline-node {
+    background-color: #f1f5f9;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-family: monospace;
+    font-weight: bold;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+.timeline-node.active {
+    background-color: #6366f1;
+    color: #ffffff;
+    border-color: #4f46e5;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -103,8 +139,8 @@ def get_allowed_moves(current_state):
 
 def is_invalid(state):
     f, w, s, c = state
-    if w == s and f != w: return True, "늑대가 양을 해쳤습니다! 🐺 먹힘 예방 실패"
-    if s == c and f != s: return True, "양이 양배추를 먹어치웠습니다! 🐑 먹힘 예방 실패"
+    if w == s and f != w: return True, "늑대가 양을 해쳤습니다! 🐺"
+    if s == c and f != s: return True, "양이 양배추를 먹어치웠습니다! 🐑"
     return False, ""
 
 # --- 3. 게임 상태 판정 및 알림(Toast) ---
@@ -129,7 +165,6 @@ if game_over:
 </div>
 """
 
-# 💡 핵심 교정: HTML 태그 줄들의 맨 앞 공백/탭을 벽 끝까지 완전히 지워 문자 인식을 방지합니다.
 st.markdown(f"""
 <div class="sim-container">
 {overlay_html}
@@ -156,13 +191,38 @@ with col_ctrl:
 
 with col_info:
     if game_over:
-        if st.button("🔄 처음부터 다시 탐색"):
-            st.session_state.history = [('L','L','L','L')]
-            st.session_state.last_toast = None
-            st.rerun()
+        # 3. BFS 모드일 때는 실패하더라도 되돌아갈 수 있도록 분기 분리
+        if st.session_state.search_mode == "너비 우선 탐색 (BFS)":
+            st.warning("💡 BFS 모드입니다. 다른 분기(너비)를 탐색하기 위해 이전 단계로 되돌아갈 수 있습니다.")
+            if st.button("⏪ 이 분기 취소하고 뒤로 가기"):
+                if len(st.session_state.history) > 1:
+                    st.session_state.history.pop()
+                    st.session_state.last_toast = None
+                    st.rerun()
+        else:
+            if st.button("🔄 처음부터 다시 탐색"):
+                st.session_state.history = [('L','L','L','L')]
+                st.session_state.last_toast = None
+                st.rerun()
+                
     elif curr == ('R','R','R','R'):
+        # 5. 빵빠레 효과 업그레이드 (풍선 + 눈꽃 동시 연출)
         st.balloons()
+        st.snow()
         st.success("🎉 **목표 상태 도달 성공!** 모든 요소를 강 건너로 무사히 이동시켰습니다.")
+        
+        # 4. 정답 맞췄을 때 지난 이동 과정 정리 출력
+        st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
+        history_elements = []
+        for state in st.session_state.history:
+            state_str = "".join(state)
+            is_last = (state == st.session_state.history[-1])
+            active_class = "active" if is_last else ""
+            history_elements.append(f'<div class="timeline-node {active_class}">{state_str}</div>')
+        
+        timeline_html = f'<div class="timeline-box">{" <span style="color:#94a3b8;font-weight:bold;">➔</span> ".join(history_elements)}</div>'
+        st.markdown(timeline_html, unsafe_allow_html=True)
+        
         if st.button("🔄 게임 초기화 후 다시 하기"):
             st.session_state.history = [('L','L','L','L')]
             st.session_state.last_toast = None
