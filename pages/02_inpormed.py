@@ -4,7 +4,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 # =========================
-# matplotlib (Cloud 안전 설정)
+# 폰트 (Cloud 안전)
 # =========================
 plt.rcParams["font.family"] = "DejaVu Sans"
 plt.rcParams["axes.unicode_minus"] = False
@@ -13,6 +13,24 @@ st.set_page_config(
     page_title="탐색 알고리즘 게임",
     layout="wide"
 )
+
+# =========================
+# 한글 → 영어 매핑 (핵심 해결)
+# =========================
+name_map = {
+    "서울": "Seoul",
+    "홍천": "Hongcheon",
+    "천안": "Cheonan",
+    "음성": "Eumseong",
+    "제천": "Jecheon",
+    "안동": "Andong",
+    "상주": "Sangju",
+    "의성": "Uiseong",
+    "대전": "Daejeon",
+    "대구": "Daegu",
+    "울산": "Ulsan",
+    "부산": "Busan"
+}
 
 # =========================
 # 그래프
@@ -51,7 +69,7 @@ h = {
 }
 
 # =========================
-# 게임 초기화
+# 상태 초기화
 # =========================
 def reset_game():
     st.session_state.current = "부산"
@@ -61,9 +79,6 @@ def reset_game():
     st.session_state.game_started = False
     st.session_state.popup = ""
 
-# =========================
-# 세션 초기화
-# =========================
 if "current" not in st.session_state:
     reset_game()
 
@@ -90,7 +105,7 @@ if not st.session_state.game_started:
         st.markdown("""
         <div style='text-align:center'>
         <h2>최상 우선 탐색 (Greedy)</h2>
-        <p>h(n)만 보고 가장 가까운 노드 선택</p>
+        <p>h(n) 기준으로 가장 가까운 노드 선택</p>
         <h3>시작하시겠습니까?</h3>
         </div>
         """, unsafe_allow_html=True)
@@ -143,7 +158,6 @@ candidates = []
 
 if current != "서울":
     for city, dist in graph[current].items():
-
         g = st.session_state.cost + dist
         hh = h[city]
         f = g + hh
@@ -201,10 +215,14 @@ for node in G.nodes():
 
 fig, ax = plt.subplots(figsize=(8, 8))
 
+# =========================
+# 🔥 핵심 수정: 영어 라벨 표시
+# =========================
 nx.draw(
     G,
     pos,
     with_labels=True,
+    labels={node: name_map[node] for node in G.nodes()},
     node_color=colors,
     node_size=2500,
     font_size=11,
@@ -233,7 +251,6 @@ with col_info:
 
     st.write("### 이동 경로")
 
-    # ✔ TypeError 완전 방지
     st.write(" → ".join([str(x) for x in st.session_state.path]))
 
     if current != "서울":
@@ -257,7 +274,7 @@ with col_info:
                         "h(n)": x["h"],
                         "f(n)": x["f"]
                     }
-                    for x in candidates
+                for x in candidates
                 ]),
                 hide_index=True
             )
