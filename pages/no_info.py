@@ -95,6 +95,7 @@ def get_allowed_moves(current_state, history_list):
         ((next_f, w, s, next_f), "🥬 양배추와 함께 이동")
     ]
     for state, label in all_moves:
+        # 농부와 같은 강가에 있는 대상만 함께 탑승 가능
         if "🐺" in label and f != w: continue
         if "🐑" in label and f != s: continue
         if "🥬" in label and f != c: continue
@@ -124,7 +125,7 @@ if 'bfs_next_level_parent' not in st.session_state:
 if 'current_mode_track' not in st.session_state:
     st.session_state.current_mode_track = search_mode
 
-# 사이드바 모드 교체 시 완벽 초기화
+# 사이드바 모드 교체 시 완벽 리셋
 if st.session_state.current_mode_track != search_mode:
     st.session_state.current_mode_track = search_mode
     st.session_state.dfs_history = [('L','L','L','L')]
@@ -135,7 +136,7 @@ if st.session_state.current_mode_track != search_mode:
     st.session_state.bfs_next_level_parent = None
     st.rerun()
 
-# 💡 핵심 수정 1: 탐색 대상(next_candidates) 결정식을 모드별로 완전히 분리 격리
+# 작동 모드에 따른 데이터 독립 바인딩
 if search_mode == "깊이 우선 탐색 (DFS)":
     history = st.session_state.dfs_history
     curr = st.session_state.dfs_history[-1]
@@ -147,6 +148,7 @@ else:
 
 game_over, reason = is_invalid(curr)
 
+# 시뮬레이션 밑에 뜨던 지저분한 문구를 오른쪽 하단 팝업창(st.toast)으로 완벽 이동
 if game_over:
     st.toast(f"🚨 {reason}", icon="🔥")
 
@@ -183,7 +185,7 @@ with col_info:
                     st.session_state.bfs_history.pop()
                     parent = st.session_state.bfs_history[-1]
                     
-                    # 💡 핵심 수정 2: BFS 뒤로가기 동작 시 부모 노드에 귀속된 온전한 다음 큐 후보군을 재생성
+                    # 💡 버그 완벽 해결: 부모로 갈 때 대기열 큐와 검사 목록을 유기적으로 동시에 재할당
                     st.session_state.bfs_queue = get_allowed_moves(parent, st.session_state.bfs_history)
                     st.session_state.bfs_visited_candidates = set()
                     st.session_state.bfs_current_preview = parent
