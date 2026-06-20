@@ -1,11 +1,10 @@
 import streamlit as st
 import graphviz
 
-# --- 1. 기본 페이지 설정 및 세련된 테마 적용 ---
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
-# CSS 스타일 정의
-css_content = """
+# CSS 스타일 주입 (들여쓰기 공간의 모든 유령 공백 제거)
+st.markdown("""<style>
 .main { background-color: #f8fafc; }
 .sim-container {
     background: linear-gradient(to bottom, #f0fdf4 0%, #ffffff 100%);
@@ -94,10 +93,8 @@ div.stButton > button:hover {
     color: #ffffff;
     border-color: #4f46e5;
 }
-"""
-st.markdown(f"<style>{css_content}</style>", unsafe_allow_html=True)
+</style>""", unsafe_allow_html=True)
 
-# --- 2. 게임 로직 및 세션 초기화 ---
 if 'history' not in st.session_state:
     st.session_state.history = [('L','L','L','L')]
 if 'search_mode' not in st.session_state:
@@ -129,7 +126,6 @@ def is_invalid(state):
     if s == c and f != s: return True, "양이 양배추를 먹어치웠습니다! 🐑"
     return False, ""
 
-# --- 3. 게임 상태 판정 및 알림(Toast) ---
 curr = st.session_state.history[-1]
 game_over, reason = is_invalid(curr)
 
@@ -137,7 +133,6 @@ if game_over and st.session_state.last_toast != reason:
     st.toast(f"🚨 {reason}", icon="🔥")
     st.session_state.last_toast = reason
 
-# --- 4. 상단 레이아웃: 시뮬레이션 화면 및 오버레이 ---
 f, w, s, c = curr
 pos = lambda side, offset: f"{offset}px" if side == 'L' else f"calc(100% - {offset + 25}px)"
 boat_pos = "22%" if f == 'L' else "68%"
@@ -146,8 +141,7 @@ overlay_html = ""
 if game_over:
     overlay_html = f'<div class="game-over-overlay"><div class="game-over-title">🚨 GAME OVER 🚨</div><div class="game-over-reason">{reason}</div></div>'
 
-sim_template = f"""
-<div class="sim-container">
+st.markdown(f"""<div class="sim-container">
     {overlay_html}
     <div class="land land-left"></div>
     <div class="land land-right"></div>
@@ -157,11 +151,8 @@ sim_template = f"""
     <div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
     <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
     <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
-</div>
-"""
-st.markdown(sim_template, unsafe_allow_html=True)
+</div>""", unsafe_allow_html=True)
 
-# --- 5. 안내 문구 및 제어부 ---
 col_info, col_ctrl = st.columns([3, 1])
 with col_ctrl:
     mode = st.radio("🔍 탐색 모드", ["깊이 우선 탐색 (DFS)", "너비 우선 탐색 (BFS)"], label_visibility="collapsed")
@@ -185,29 +176,24 @@ with col_info:
                 st.session_state.history = [('L','L','L','L')]
                 st.session_state.last_toast = None
                 st.rerun()
-                
     elif curr == ('R','R','R','R'):
         st.balloons()
         st.snow()
         st.success("🎉 **목표 상태 도달 성공!** 모든 요소를 강 건너로 무사히 이동시켰습니다.")
         st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
-        
         history_elements = []
         for state in st.session_state.history:
             state_str = "".join(state)
             is_last = (state == st.session_state.history[-1])
             active_class = "active" if is_last else ""
             history_elements.append(f'<div class="timeline-node {active_class}">{state_str}</div>')
-        
         timeline_html = f'<div class="timeline-box">{" <span style="color:#94a3b8;font-weight:bold;">➔</span> ".join(history_elements)}</div>'
         st.markdown(timeline_html, unsafe_allow_html=True)
-        
         if st.button("🔄 게임 초기화 후 다시 하기"):
             st.session_state.history = [('L','L','L','L')]
             st.session_state.last_toast = None
             st.rerun()
 
-# --- 6. 하단 레이아웃: 자동 스크롤형 트리 박스 ---
 st.markdown("---")
 st.write("🌲 **상태 공간 트리 (자동으로 최하단 스크롤이 적용됩니다)**")
 
@@ -235,8 +221,7 @@ for idx, (cand_state, label_text) in enumerate(next_candidates):
 
 svg_data = dot.pipe(format='svg').decode('utf-8')
 
-scrollable_html = f"""
-<div id="scroll-container" style="border: 2px solid #e2e8f0; border-radius: 12px; height: 260px; overflow-y: auto; overflow-x: hidden; padding: 10px; background-color: white; display: flex; justify-content: center;">
+scrollable_html = f"""<div id="scroll-container" style="border: 2px solid #e2e8f0; border-radius: 12px; height: 260px; overflow-y: auto; overflow-x: hidden; padding: 10px; background-color: white; display: flex; justify-content: center;">
     <div>{svg_data}</div>
 </div>
 <script>
@@ -249,11 +234,9 @@ scrollable_html = f"""
     window.onload = function() {{
         setTimeout(scrollToBottom, 50);
     }};
-</script>
-"""
+</script>"""
 st.components.v1.html(scrollable_html, height=280)
 
-# --- 7. 선택기 ---
 if next_candidates:
     st.write("📍 **다음에 탐색할 대상을 선택하세요:**")
     cols = st.columns(len(next_candidates))
