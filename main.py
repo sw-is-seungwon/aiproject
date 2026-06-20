@@ -125,7 +125,7 @@ with col2:
             <p class="card-body">
                 휴리스틱(Heuristic) 함수와 같은 추가적인 정보를 활용하여 목적지까지 더 효율적으로 찾아가는 방식입니다.<br><br>
                 <b>주요 학습 내용:</b><br>
-                <span class="badge">Heuristic</span><span class="badge">경로 최적화</span><br>
+                <span class="badge">최상 우선 탐색</span><span class="badge">A*</span><br>
                 • <b>서울에서 부산까지</b> 가는 최적의 경로 찾기<br>
                 • 직접 노드(도시)를 선택하며 휴리스틱 값 변화 체험<br>
                 • 실시간으로 계산되는 점수와 비용을 통해 알고리즘 직관적 이해
