@@ -4,12 +4,10 @@ import graphviz
 # --- 1. 기본 페이지 설정 및 세련된 테마 적용 ---
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
-st.markdown("""
-    <style>
-    /* 전체 배경을 차분한 소프트 그레이로 변경 */
+# CSS 스타일 정의
+css_style = """
+<style>
     .main { background-color: #f8fafc; }
-    
-    /* 1. 상단 시뮬레이션 박스 (미니멀 디자인) */
     .sim-container {
         background: linear-gradient(to bottom, #f0fdf4 0%, #ffffff 100%);
         height: 160px;
@@ -27,7 +25,6 @@ st.markdown("""
     .char { font-size: 26px; position: absolute; transition: all 1.5s ease-in-out; }
     .boat { font-size: 34px; position: absolute; bottom: 3px; transition: all 1.5s ease-in-out; }
     
-    /* 게임 오버 화면 오버레이 레이어 */
     .game-over-overlay {
         position: absolute;
         top: 0; left: 0; width: 100%; height: 100%;
@@ -57,7 +54,6 @@ st.markdown("""
         100% { transform: translate(1px, -2px) rotate(-1deg); }
     }
     
-    /* 2. 하단 선택 버튼 세련되게 커스텀 */
     div.stButton > button {
         border-radius: 24px !important;
         border: 1px solid #cbd5e1 !important;
@@ -74,8 +70,10 @@ st.markdown("""
         color: #4f46e5 !important;
         transform: translateY(-1px);
     }
-    </style>
-""", unsafe_allow_html=True)
+</style>
+"""
+# 💡 핵심 안전장치: 혹시 모를 특수 유령 공백(\\xa0)을 일반 공백으로 강제 치환
+st.markdown(css_style.replace('\xa0', ' '), unsafe_allow_html=True)
 
 # --- 2. 게임 로직 및 세션 초기화 ---
 if 'history' not in st.session_state:
@@ -133,19 +131,21 @@ if game_over:
     </div>
     """
 
-st.markdown(f"""
-    <div class="sim-container">
-        {overlay_html}
-        <div class="land land-left"></div>
-        <div class="land land-right"></div>
-        <div class="river"></div>
-        <div class="boat" style="left: {boat_pos};">🚣</div>
-        <div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
-        <div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
-        <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
-        <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
-    </div>
-""", unsafe_allow_html=True)
+# 💡 HTML 내부의 숨은 공백까지 싹 다 일반 공백으로 강제 치환하여 브라우저에 전달합니다.
+sim_html = f"""
+<div class="sim-container">
+    {overlay_html}
+    <div class="land land-left"></div>
+    <div class="land land-right"></div>
+    <div class="river"></div>
+    <div class="boat" style="left: {boat_pos};">🚣</div>
+    <div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
+    <div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
+    <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
+    <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
+</div>
+"""
+st.markdown(sim_html.replace('\xa0', ' '), unsafe_allow_html=True)
 
 # --- 5. 안내 문구 및 제어부 ---
 col_info, col_ctrl = st.columns([3, 1])
@@ -215,7 +215,7 @@ scrollable_html = f"""
     }};
 </script>
 """
-st.components.v1.html(scrollable_html, height=280)
+st.components.v1.html(scrollable_html.replace('\xa0', ' '), height=280)
 
 # --- 7. 선택기 ---
 if next_candidates:
