@@ -41,21 +41,23 @@ h = {
 }
 
 # =========================
-# 🔥 세로형 레이아웃 (핵심 수정)
+# 🔥 원래 구조 유지 + 세로 확장만
 # =========================
+Y_SCALE = 1.8   # ← 이 값만 조절하면 세로 길이 조절됨
+
 pos = {
-    "서울": (0,12),
-    "홍천": (0,10),
-    "천안": (-2,8),
-    "음성": (2,8),
-    "제천": (-3,6),
-    "안동": (3,6),
-    "대전": (-2,4),
-    "상주": (2,4),
-    "대구": (2,2),
-    "울산": (4,1),
-    "의성": (1,5),
-    "부산": (0,0)
+    "서울": (0,10),
+    "홍천": (2,9),
+    "천안": (0,7),
+    "음성": (2,7),
+    "제천": (4,8),
+    "안동": (6,7),
+    "상주": (4,5),
+    "의성": (6,5),
+    "대전": (1,3),
+    "대구": (4,2),
+    "울산": (7,1),
+    "부산": (6,-1)
 }
 
 # =========================
@@ -85,13 +87,12 @@ if not st.session_state.started:
 current = st.session_state.current
 
 # =========================
-# 후보 + 평가 (Greedy = h / A* = f)
+# 후보
 # =========================
 candidates = []
 
 if current != "서울":
     for nxt, dist in graph[current].items():
-
         g = st.session_state.cost + dist
         hh = h[nxt]
         f = g + hh
@@ -103,28 +104,35 @@ if current != "서울":
             "f": f
         })
 
-    # 🔥 핵심 수정: Greedy는 h만 사용
     if algo == "최상 우선 탐색":
         correct = min(candidates, key=lambda x: x["h"])["도시"]
     else:
         correct = min(candidates, key=lambda x: x["f"])["도시"]
 
 # =========================
-# 그래프
+# 그래프 (핵심 수정: y만 스케일)
 # =========================
 def draw():
 
-    edge_x, edge_y, edge_text = [], [], []
+    edge_x, edge_y = [], []
+    edge_text_x, edge_text_y, edge_text = [], [], []
 
     for a in graph:
         for b, w in graph[a].items():
+
             x0, y0 = pos[a]
             x1, y1 = pos[b]
+
+            # 🔥 세로 확장만 적용
+            y0 *= Y_SCALE
+            y1 *= Y_SCALE
 
             edge_x += [x0, x1, None]
             edge_y += [y0, y1, None]
 
-            edge_text.append(((x0+x1)/2, (y0+y1)/2, str(w)))
+            edge_text_x.append((x0 + x1) / 2)
+            edge_text_y.append((y0 + y1) / 2)
+            edge_text.append(str(w))
 
     edge_trace = go.Scatter(
         x=edge_x,
@@ -138,10 +146,13 @@ def draw():
 
     for n in graph:
         x, y = pos[n]
+
+        # 🔥 동일하게 y만 확장
+        y *= Y_SCALE
+
         node_x.append(x)
         node_y.append(y)
 
-        # 🔥 노드 값 표시
         if algo == "최상 우선 탐색":
             labels.append(f"{n}\nh={h[n]}")
         else:
@@ -168,10 +179,10 @@ def draw():
     )
 
     weight_trace = go.Scatter(
-        x=[t[0] for t in edge_text],
-        y=[t[1] for t in edge_text],
+        x=edge_text_x,
+        y=edge_text_y,
         mode="text",
-        text=[t[2] for t in edge_text],
+        text=edge_text,
         textfont=dict(size=12),
         hoverinfo="none"
     )
@@ -179,7 +190,7 @@ def draw():
     fig = go.Figure([edge_trace, weight_trace, node_trace])
 
     fig.update_layout(
-        height=800,   # 🔥 세로 강조
+        height=800,
         margin=dict(l=10, r=10, t=10, b=10)
     )
 
@@ -204,16 +215,7 @@ with col2:
 
     if current != "서울":
 
-        # 🔥 Greedy일 때 h 중심 표시
-        if algo == "최상 우선 탐색":
-            st.write("### 후보 (h 기준)")
-            st.dataframe(
-                pd.DataFrame([{"도시":c["도시"], "h(n)":c["h"]} for c in candidates]),
-                hide_index=True
-            )
-        else:
-            st.write("### 후보 (f 기준)")
-            st.dataframe(pd.DataFrame(candidates), hide_index=True)
+        st.dataframe(pd.DataFrame(candidates), hide_index=True)
 
         for nxt in graph[current]:
 
