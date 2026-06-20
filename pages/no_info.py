@@ -4,8 +4,8 @@ import graphviz
 # --- 1. 기본 페이지 설정 및 세련된 테마 적용 ---
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
-st.markdown("""
-<style>
+# CSS 스타일 정의
+css_content = """
 .main { background-color: #f8fafc; }
 .sim-container {
     background: linear-gradient(to bottom, #f0fdf4 0%, #ffffff 100%);
@@ -21,10 +21,8 @@ st.markdown("""
 .land-left { left: 0; border-radius: 0 16px 0 0; }
 .land-right { right: 0; border-radius: 16px 0 0 0; }
 .river { background-color: #38bdf8; height: 35px; position: absolute; bottom: 0; left: 150px; right: 150px; }
-
 .char { font-size: 26px; position: absolute; transition: all 3.0s ease-in-out; }
 .boat { font-size: 34px; position: absolute; bottom: 3px; transition: all 3.0s ease-in-out; }
-
 .game-over-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -41,11 +39,7 @@ st.markdown("""
 }
 .game-over-title { font-size: 32px; margin-bottom: 5px; animation: shake 0.5s infinite; }
 .game-over-reason { font-size: 16px; opacity: 0.9; }
-
-@keyframes fadeIn {
-    to { opacity: 1; }
-}
-
+@keyframes fadeIn { to { opacity: 1; } }
 @keyframes shake {
     0% { transform: translate(1px, 1px) rotate(0deg); }
     10% { transform: translate(-1px, -2px) rotate(-1deg); }
@@ -59,7 +53,6 @@ st.markdown("""
     90% { transform: translate(2px, 2px) rotate(0deg); }
     100% { transform: translate(1px, -2px) rotate(-1deg); }
 }
-
 div.stButton > button {
     border-radius: 24px !important;
     border: 1px solid #cbd5e1 !important;
@@ -76,7 +69,6 @@ div.stButton > button:hover {
     color: #4f46e5 !important;
     transform: translateY(-1px);
 }
-
 .timeline-box {
     background-color: #ffffff;
     padding: 15px;
@@ -102,8 +94,8 @@ div.stButton > button:hover {
     color: #ffffff;
     border-color: #4f46e5;
 }
-</style>
-""", unsafe_allow_html=True)
+"""
+st.markdown(f"<style>{css_content}</style>", unsafe_allow_html=True)
 
 # --- 2. 게임 로직 및 세션 초기화 ---
 if 'history' not in st.session_state:
@@ -117,14 +109,12 @@ def get_allowed_moves(current_state):
     f, w, s, c = current_state
     next_f = 'R' if f == 'L' else 'L'
     candidates = []
-    
     all_moves = [
         ((next_f, w, s, c), "👨‍🌾 농부 혼자 이동"),
         ((next_f, next_f, s, c), "🐺 늑대와 함께 이동"),
         ((next_f, w, next_f, c), "🐑 양과 함께 이동"),
         ((next_f, w, s, next_f), "🥬 양배추와 함께 이동")
     ]
-    
     for state, label in all_moves:
         if "🐺" in label and f != w: continue
         if "🐑" in label and f != s: continue
@@ -152,24 +142,24 @@ f, w, s, c = curr
 pos = lambda side, offset: f"{offset}px" if side == 'L' else f"calc(100% - {offset + 25}px)"
 boat_pos = "22%" if f == 'L' else "68%"
 
-# 💡 수정 포인트: 파이썬 조건문 내부의 문자열 들여쓰기 문법을 완전히 교정했습니다.
 overlay_html = ""
 if game_over:
-    overlay_html = f"""<div class="game-over-overlay"><div class="game-over-title">🚨 GAME OVER 🚨</div><div class="game-over-reason">{reason}</div></div>"""
+    overlay_html = f'<div class="game-over-overlay"><div class="game-over-title">🚨 GAME OVER 🚨</div><div class="game-over-reason">{reason}</div></div>'
 
-st.markdown(f"""
+sim_template = f"""
 <div class="sim-container">
-{overlay_html}
-<div class="land land-left"></div>
-<div class="land land-right"></div>
-<div class="river"></div>
-<div class="boat" style="left: {boat_pos};">🚣</div>
-<div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
-<div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
-<div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
-<div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
+    {overlay_html}
+    <div class="land land-left"></div>
+    <div class="land land-right"></div>
+    <div class="river"></div>
+    <div class="boat" style="left: {boat_pos};">🚣</div>
+    <div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
+    <div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
+    <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
+    <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
 </div>
-""", unsafe_allow_html=True)
+"""
+st.markdown(sim_template, unsafe_allow_html=True)
 
 # --- 5. 안내 문구 및 제어부 ---
 col_info, col_ctrl = st.columns([3, 1])
@@ -200,8 +190,8 @@ with col_info:
         st.balloons()
         st.snow()
         st.success("🎉 **목표 상태 도달 성공!** 모든 요소를 강 건너로 무사히 이동시켰습니다.")
-        
         st.write("📋 **강을 건넌 성공 이동 경로 기록:**")
+        
         history_elements = []
         for state in st.session_state.history:
             state_str = "".join(state)
