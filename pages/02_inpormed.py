@@ -22,6 +22,9 @@ graph = {
     "부산": {"상주":110,"대구":60,"울산":40}
 }
 
+# =========================
+# 휴리스틱
+# =========================
 h = {
     "서울":0,
     "홍천":50,
@@ -37,6 +40,9 @@ h = {
     "부산":999
 }
 
+# =========================
+# 세로 확장 (유지)
+# =========================
 Y_SCALE = 1.8
 
 pos = {
@@ -55,7 +61,7 @@ pos = {
 }
 
 # =========================
-# 상태 초기화
+# 상태
 # =========================
 def reset():
     st.session_state.current = "부산"
@@ -68,65 +74,43 @@ def reset():
 if "current" not in st.session_state:
     reset()
 
-st.title("🚗 탐색 알고리즘 게임")
+st.title("🚗 탐색 알고리즘 게임 (Greedy vs A*)")
 
-algo = st.radio("알고리즘 선택", ["최상 우선 탐색", "A* 탐색"], horizontal=True)
+algo = st.radio("알고리즘", ["최상 우선 탐색", "A* 탐색"], horizontal=True)
 
 # =========================
-# 🔥 시작 화면 (핵심 수정)
+# 🔥 START 화면 + 평가함수 설명 추가
 # =========================
 if not st.session_state.started:
 
+    st.markdown("## 탐색 알고리즘 설명")
+
     if algo == "최상 우선 탐색":
 
-        st.markdown("""
-        ## 🧠 최상 우선 탐색 (Greedy Best-First Search)
+        st.info("""
+### 최상 우선 탐색 (Greedy Best-First Search)
 
-        ### 📌 개념
-        현재 노드에서 목표까지 **가장 가까워 보이는 노드(h(n))**를 선택하는 탐색 방법
+- 평가 함수: **h(n)**
+- 현재 노드에서 목표까지의 추정 거리만 사용
+- 가장 작은 h(n)을 가진 노드를 선택
 
-        ### 📊 평가 함수
-        ```
-        h(n)
-        ```
-
-        ### ⚙️ 의미
-        - g(n): 고려하지 않음
-        - h(n): 목표까지의 추정 거리만 사용
-
-        👉 즉, "당장 좋아 보이는 방향"으로만 이동
-
-        ---
+👉 f(n) 사용하지 않음
         """)
 
     else:
 
-        st.markdown("""
-        ## 🧠 A* 탐색 (A-Star Search)
+        st.info("""
+### A* 탐색
 
-        ### 📌 개념
-        현재까지의 비용 + 목표까지의 추정을 함께 고려하는 최적 탐색
-
-        ### 📊 평가 함수
-        ```
-        f(n) = g(n) + h(n)
-        ```
-
-        ### ⚙️ 의미
-        - g(n): 시작 → 현재까지 실제 비용
-        - h(n): 현재 → 목표 예상 비용
-
-        👉 "현재까지 비용 + 미래 예측"을 동시에 고려
-
-        ---
+- 평가 함수: **f(n) = g(n) + h(n)**
+- g(n): 시작점 → 현재까지 실제 비용
+- h(n): 현재 → 목표 추정 비용
+- f(n)이 가장 작은 노드를 선택
         """)
 
-    col1, col2, col3 = st.columns([2,1,2])
-
-    with col2:
-        if st.button("🚀 시작하기", use_container_width=True):
-            st.session_state.started = True
-            st.rerun()
+    if st.button("시작하기"):
+        st.session_state.started = True
+        st.rerun()
 
     st.stop()
 
@@ -136,17 +120,23 @@ if not st.session_state.started:
 current = st.session_state.current
 
 # =========================
-# 후보 계산
+# 후보
 # =========================
 candidates = []
 
 if current != "서울":
     for nxt, dist in graph[current].items():
+
         g = st.session_state.cost + dist
         hh = h[nxt]
         f = g + hh
 
-        candidates.append({"도시": nxt, "g": g, "h": hh, "f": f})
+        candidates.append({
+            "도시": nxt,
+            "g": g,
+            "h": hh,
+            "f": f
+        })
 
     if algo == "최상 우선 탐색":
         correct = min(candidates, key=lambda x: x["h"])["도시"]
@@ -187,6 +177,7 @@ def draw():
     node_x, node_y, labels, colors = [], [], [], []
 
     for n in graph:
+
         x, y = pos[n]
         y *= Y_SCALE
 
@@ -230,7 +221,7 @@ def draw():
     return go.Figure([edge_trace, weight_trace, node_trace])
 
 # =========================
-# 화면
+# 출력
 # =========================
 col1, col2 = st.columns([3,1])
 
@@ -256,4 +247,25 @@ with col2:
 
                 if nxt == correct:
                     st.session_state.current = nxt
-                    st
+                    st.session_state.path.append(nxt)
+                    st.session_state.cost += graph[current][nxt]
+                    st.session_state.score += 10
+                    st.rerun()
+                else:
+                    st.session_state.popup = f"오답! 정답: {correct}"
+                    st.rerun()
+
+if st.session_state.popup:
+    st.error(st.session_state.popup)
+
+    if st.button("확인"):
+        st.session_state.popup = ""
+
+if current == "서울":
+    st.success("도착!")
+    st.write("총 비용:", st.session_state.cost)
+    st.write("점수:", st.session_state.score)
+
+    if st.button("다시 시작"):
+        reset()
+        st.rerun()
