@@ -135,6 +135,21 @@ if game_over:
     </div>
     """
 
+# 💡 핵심 수정: 반드시 unsafe_allow_html=True가 포함되어 있어야 합니다!
+st.markdown(f"""
+    <div class="sim-container">
+        {overlay_html}
+        <div class="land land-left"></div>
+        <div class="land land-right"></div>
+        <div class="river"></div>
+        <div class="boat" style="left: {boat_pos};">🚣</div>
+        <div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
+        <div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
+        <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
+        <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
+    </div>
+""", unsafe_allow_html=True) 
+
 st.markdown(f"""
     <div class="sim-container">
         {overlay_html}
