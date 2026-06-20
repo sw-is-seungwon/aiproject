@@ -4,7 +4,7 @@ import graphviz
 # --- 1. 기본 페이지 설정 및 세련된 테마 적용 ---
 st.set_page_config(page_title="AI 탐색 기초 교육", layout="wide")
 
-# 💡 수정 포인트: CSS와 HTML 선언 시 앞에 들여쓰기 공간을 완전히 없애야 문자로 깨지지 않습니다.
+# CSS 스타일 정의 (문자열 시작점에 들여쓰기를 전부 제거)
 st.markdown("""
 <style>
 .main { background-color: #f8fafc; }
@@ -124,24 +124,24 @@ overlay_html = ""
 if game_over:
     overlay_html = f"""
 <div class="game-over-overlay">
-    <div class="game-over-title">🚨 GAME OVER 🚨</div>
-    <div class="game-over-reason">{reason}</div>
+<div class="game-over-title">🚨 GAME OVER 🚨</div>
+<div class="game-over-reason">{reason}</div>
 </div>
 """
 
-# 💡 수정 포인트: 문자열 시작 부분의 들여쓰기를 왼쪽 벽에 딱 붙였습니다.
+# 💡 핵심 교정: HTML 태그 줄들의 맨 앞 공백/탭을 벽 끝까지 완전히 지워 문자 인식을 방지합니다.
 st.markdown(f"""
-    <div class="sim-container">
-        {overlay_html}
-        <div class="land land-left"></div>
-        <div class="land land-right"></div>
-        <div class="river"></div>
-        <div class="boat" style="left: {boat_pos};">🚣</div>
-        <div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
-        <div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
-        <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
-        <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
-    </div>
+<div class="sim-container">
+{overlay_html}
+<div class="land land-left"></div>
+<div class="land land-right"></div>
+<div class="river"></div>
+<div class="boat" style="left: {boat_pos};">🚣</div>
+<div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
+<div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
+<div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
+<div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
+</div>
 """, unsafe_allow_html=True)
 
 # --- 5. 안내 문구 및 제어부 ---
