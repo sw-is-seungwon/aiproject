@@ -1,7 +1,5 @@
 graphviz
 
 streamlit
-networkx
-matplotlib
 pandas
-numpy
+plotly
