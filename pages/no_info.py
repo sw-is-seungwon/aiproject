@@ -131,17 +131,17 @@ if game_over:
 
 # 💡 수정 포인트: 문자열 시작 부분의 들여쓰기를 왼쪽 벽에 딱 붙였습니다.
 st.markdown(f"""
-<div class="sim-container">
-    {overlay_html}
-    <div class="land land-left"></div>
-    <div class="land land-right"></div>
-    <div class="river"></div>
-    <div class="boat" style="left: {boat_pos};">🚣</div>
-    <div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
-    <div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
-    <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
-    <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
-</div>
+    <div class="sim-container">
+        {overlay_html}
+        <div class="land land-left"></div>
+        <div class="land land-right"></div>
+        <div class="river"></div>
+        <div class="boat" style="left: {boat_pos};">🚣</div>
+        <div class="char" style="left: {pos(f, 15)}; bottom: 45px;">👨‍🌾</div>
+        <div class="char" style="left: {pos(w, 50)}; bottom: 12px;">🐺</div>
+        <div class="char" style="left: {pos(s, 75)}; bottom: 12px;">🐑</div>
+        <div class="char" style="left: {pos(c, 100)}; bottom: 12px;">🥬</div>
+    </div>
 """, unsafe_allow_html=True)
 
 # --- 5. 안내 문구 및 제어부 ---
