@@ -58,7 +58,6 @@ def get_allowed_moves(current_state):
     next_f = 'R' if f == 'L' else 'L'
     candidates = []
     
-    # 가독성을 높이기 위해 이모지와 대상 명확화
     all_moves = [
         ((next_f, w, s, c), "👨‍🌾 농부 혼자 이동"),
         ((next_f, next_f, s, c), "🐺 늑대와 함께 이동"),
@@ -151,7 +150,6 @@ for idx, (cand_state, label_text) in enumerate(next_candidates):
     dot.node(f"c_{idx}", cand_lbl, style="filled", color="#10b981", fillcolor="#d1fae5", fontcolor="#065f46")
     dot.edge(f"h_{len(st.session_state.history)-1}", f"c_{idx}", style="dashed", color="#10b981", arrowsize='0.4')
 
-# 💡 핵심 해결책: HTML/CSS가 주입된 iframe 컨테이너 내에 차트를 넣어 완벽하게 독립 스크롤을 구현합니다.
 svg_data = dot.pipe(format='svg').decode('utf-8')
 scrollable_html = f"""
 <div style="border: 2px solid #e2e8f0; border-radius: 12px; height: 260px; overflow-y: auto; overflow-x: hidden; padding: 10px; background-color: white; display: flex; justify-content: center;">
@@ -160,14 +158,20 @@ scrollable_html = f"""
 """
 st.components.v1.html(scrollable_html, height=280)
 
-# --- 6. 에러 해결: 안전한 st.columns 구조로 매핑된 선택기 ---
+# --- 6. 수정된 선택기 (안전한 에러 핸들링 및 예외 처리) ---
 if next_candidates:
     st.write("📍 **다음에 탐색할 대상을 선택하세요:**")
-    # 고정된 개수의 안전한 컬럼 생성 (st.column 대 단수형 버그 완벽 수정)
+    # 컬럼을 생성하기 전에 리스트가 비어있지 않은지 검증(상단 조건문으로 보호)
     cols = st.columns(len(next_candidates))
     for idx, (cand_state, label_text) in enumerate(next_candidates):
         with cols[idx]:
-            # LLLL을 지우고 이모지와 텍스트 요소만 깔끔하게 노출
             if st.button(label_text, key=f"action_btn_{idx}", use_container_width=True):
                 st.session_state.history.append(cand_state)
                 st.rerun()
+elif not game_over and curr != ('R','R','R','R'):
+    # 다음 후보는 없는데 게임 오버나 성공 상태가 아닌 막다른 길(Deadlock)인 경우
+    st.warning("⚠️ **더 이상 이동할 수 있는 경로가 없습니다! (막다른 길)**")
+    if st.button("⏪ 한 단계 뒤로 가기"):
+        if len(st.session_state.history) > 1:
+            st.session_state.history.pop()
+            st.rerun()
